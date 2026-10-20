@@ -8,6 +8,7 @@ const HORIZONTE_DIAS = 60;       // quantos dias à frente a agenda é mantida
 const NOME_AGENDA = 'Plantão';
 const TAM_BLOCO = 6000;          // limite de caracteres por propriedade (o Google aceita ~9 KB)
 const MAX_EVENTOS = 2500;
+const LIMITE_BYTES = 450000;     // margem abaixo do limite de ~500 KB das propriedades do usuário
 const LOTE_OPS = 20;             // máximo de criações/alterações/exclusões por rodada (o Google limita o ritmo)
 const PAUSA_OP_MS = 500;         // pausa entre operações na agenda, para não estourar o limite de ritmo
 
@@ -259,8 +260,7 @@ function ledger(){
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('Escala de Plantão')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
 }
 
 /* ---------------- armazenamento ---------------- */
@@ -274,8 +274,11 @@ function srvLerEstado_() {
   const eventos = [];
   Object.keys(p)
     .filter(function (k) { return /^ev\d+$/.test(k); })
+    // cfg.nev diz quantos blocos valem: um bloco velho que não chegou a ser apagado é ignorado
+    .filter(function (k) { return cfg.nev === undefined || Number(k.slice(2)) < cfg.nev; })
     .sort(function (a, b) { return Number(a.slice(2)) - Number(b.slice(2)); })
     .forEach(function (k) { JSON.parse(p[k]).forEach(function (e) { eventos.push(e); }); });
+  delete cfg.nev;
   cfg.eventos = eventos;
   return cfg;
 }
@@ -294,9 +297,6 @@ function srvNormalizar_(d) {
 }
 
 function srvGravarEstado_(novo, rev) {
-  const cfg = { v: 1, horarios: novo.horarios, ciclos: novo.ciclos, alertas: novo.alertas, valorHora: novo.valorHora, feriados: novo.feriados, ferAnos: novo.ferAnos, feriadosSem: novo.feriadosSem || [], rev: rev };
-  const cfgTxt = JSON.stringify(cfg);
-  if (cfgTxt.length > TAM_BLOCO) throw new Error('Configuração grande demais.');
   if (novo.eventos.length > MAX_EVENTOS) throw new Error('Lançamentos demais. Exclua os mais antigos.');
   const blocos = [];
   let atual = [], tam = 2;
@@ -306,10 +306,17 @@ function srvGravarEstado_(novo, rev) {
     atual.push(e); tam += s.length + 1;
   });
   if (atual.length) blocos.push(atual);
+  const cfg = { v: 1, horarios: novo.horarios, ciclos: novo.ciclos, alertas: novo.alertas, valorHora: novo.valorHora, feriados: novo.feriados, ferAnos: novo.ferAnos, feriadosSem: novo.feriadosSem || [], rev: rev, nev: blocos.length };
+  const cfgTxt = JSON.stringify(cfg);
+  if (cfgTxt.length > TAM_BLOCO) throw new Error('Configuração grande demais.');
   const props = srvProps_();
   const antigos = Object.keys(props.getProperties());
   const grava = { cfg: cfgTxt };
   blocos.forEach(function (b, i) { grava['ev' + i] = JSON.stringify(b); });
+  // o Google limita as propriedades do usuário a ~500 KB no total; avisa antes de estourar
+  const bytes = Object.keys(grava).reduce(function (a, k) { return a + Utilities.newBlob(k + grava[k]).getBytes().length; }, 0);
+  if (bytes > LIMITE_BYTES) throw new Error('Espaço de armazenamento cheio. Exclua lançamentos antigos.');
+  // cfg e blocos vão numa só gravação; cfg.nev faz a leitura ignorar blocos velhos se a limpeza abaixo falhar
   props.setProperties(grava, false);
   antigos.forEach(function (k) {
     if (/^ev\d+$/.test(k) && !(k in grava)) props.deleteProperty(k);
@@ -397,6 +404,9 @@ function srvEspec_(t, tz) {
   return { key: key, titulo: titulo, desc: desc, cor: cor, alertas: alertas, inicio: inicio, fim: fim, sig: sig };
 }
 
+/** Títulos gerados por srvEspec_ (precisa acompanhar se eles mudarem). */
+const TITULO_APP = /^(Plantão — (DIA|NOITE)|DRSO — [\d,]+h|Plantão \(permuta com .*\))$/;
+
 function srvAplicar_(ev, sp, novo) {
   // a marca "k" vem primeiro: se algo falhar depois, o evento já é reconhecido e será ajustado na próxima rodada
   ev.setTag('k', sp.key);
@@ -462,8 +472,8 @@ function srvSincronizar_() {
     if (ev.getStartTime().getTime() < ini.getTime()) return;
     const k = ev.getTag('k');
     if (!k) {
-      // sobra de uma rodada interrompida: evento do app sem marca. Só mexe se o título é de plantão.
-      if (/^Plantão/.test(ev.getTitle())) { if (tentar(function () { ev.deleteEvent(); })) removidos++; }
+      // sobra de uma rodada interrompida: evento do app sem marca. Só mexe se o título é exatamente um dos que o app cria.
+      if (TITULO_APP.test(ev.getTitle())) { if (tentar(function () { ev.deleteEvent(); })) removidos++; }
       return;
     }
     const sp = desej[k];
@@ -512,6 +522,12 @@ function sincronizarDiario() {
       if (r.pendente > 0) Utilities.sleep(r.limite ? 60000 : 2000);
     } while (r.pendente > 0 && Date.now() - t0 < 240000);
   } catch (e) {
-    srvProps_().setProperty('sync', JSON.stringify({ erro: String((e && e.message) || e), quando: new Date().toISOString() }));
+    const msg = String((e && e.message) || e);
+    // sem escala configurada (dados apagados) não há o que manter: remove o próprio gatilho em vez de falhar todo dia
+    if (/Escala ainda não configurada/.test(msg)) {
+      ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'sincronizarDiario') ScriptApp.deleteTrigger(t); });
+      return;
+    }
+    srvProps_().setProperty('sync', JSON.stringify({ erro: msg, quando: new Date().toISOString() }));
   }
 }

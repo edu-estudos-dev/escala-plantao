@@ -24,11 +24,12 @@ Cada pessoa abre o app com a própria conta Google (`executeAs: USER_ACCESSING`,
   - Agenda: `srvSincronizar_` compara o que existe com o que deveria existir pelas tags `k` (chave) e `sig` (assinatura). Faz no máximo 20 operações por rodada, com pausa de 500 ms entre elas.
 - `Index.html`: o front inteiro (CSS, HTML e JS num só arquivo, sem framework). Usa uma **cópia idêntica** do bloco UTIL/ENGINE, além das views (`viewHoje`, `viewMes`, `viewLancar`, `viewSaldos`, `viewAjustes`), dos formulários e de `gs()`, um wrapper com Promise sobre `google.script.run`.
 
-**Importante:** o bloco entre `//#UTIL-START` e `//#ENGINE-END` precisa ficar igual nos dois arquivos. Toda mudança no motor deve ser feita nos dois. Para conferir:
+**Importante:** o bloco entre `//#UTIL-START` e `//#ENGINE-END` precisa ficar igual nos dois arquivos. Toda mudança no motor deve ser feita nos dois.
 
-```bash
-diff <(sed -n '/\/\/#UTIL-START/,/\/\/#ENGINE-END/p' Código.js) <(sed -n '/\/\/#UTIL-START/,/\/\/#ENGINE-END/p' Index.html)
-```
+- `testes/testes.js`: confere se o motor está igual nos dois arquivos e testa feriados, cálculo de DRSO, armazenamento em blocos e os títulos de evento. Rode `node testes/testes.js` antes de qualquer `clasp push`. O `.claspignore` mantém a pasta fora do Apps Script.
+- Feriados: `feriadosDoAno(ano)` gera as datas fixas mais a Sexta-feira Santa. `ferAnos` guarda os anos que já foram adicionados aos dados do usuário, para não trazer de volta um feriado que ele removeu.
+- Armazenamento: `cfg.nev` diz quantos blocos `evN` valem. Ao ler, blocos acima disso são ignorados. Há um limite de espaço em `LIMITE_BYTES`, abaixo dos ~500 KB que o Google permite.
+- `TITULO_APP` precisa acompanhar os títulos gerados em `srvEspec_`, porque é por ele que a sincronização reconhece eventos do app que ficaram sem marca.
 
 ## Regras do projeto
 
