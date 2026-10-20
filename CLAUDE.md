@@ -36,6 +36,7 @@ Cada pessoa abre o app com a própria conta Google (`executeAs: USER_ACCESSING`,
 
 - **Nunca rodar `clasp push` sem o usuário pedir explicitamente.**
 - **Antes de começar mudanças grandes, rodar `clasp pull`** para trazer a versão atual do Apps Script (o código pode ter sido editado no editor online).
+- **Só rodar `clasp pull` com o git limpo** (`git status` sem mudanças). O pull sobrescreve os arquivos locais sem perguntar e apaga o que não foi commitado. Se houver mudanças, commite antes.
 
 ## Como publicar
 

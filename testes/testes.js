@@ -122,7 +122,11 @@ assert.deepStrictEqual(E.PADRAO().feriados, ANTIGA);
   assert.strictEqual(lerCopia(JSON.stringify(Object.assign({}, dados, { eventos: [{ id: 'b', tipo: 'banco', data: '01/06/2026' }] }))), null);
 }
 
-// 9. normalizar aceita lixo
+// 9. DRSO paga sem valor da hora é bloqueada no formulário (o valor depende da graduação)
+assert.ok(cli.includes("if(valor===null&&(v.destino||'pagamento')!=='banco')return erroForm("), 'bloqueio de DRSO sem valor da hora sumiu do Index.html');
+assert.ok(!cli.includes('ex.: 45,00'), 'Ajustes não deve sugerir um valor da hora');
+
+// 10. normalizar aceita lixo
 assert.ok(E.normalizar(null).feriados.length > 0);
 assert.ok(E.normalizar('x').ciclos.length === 0);
 
