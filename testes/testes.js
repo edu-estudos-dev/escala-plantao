@@ -126,7 +126,11 @@ assert.deepStrictEqual(E.PADRAO().feriados, ANTIGA);
 assert.ok(cli.includes("if(valor===null&&(v.destino||'pagamento')!=='banco')return erroForm("), 'bloqueio de DRSO sem valor da hora sumiu do Index.html');
 assert.ok(!cli.includes('ex.: 45,00'), 'Ajustes não deve sugerir um valor da hora');
 
-// 10. normalizar aceita lixo
+// 10. gravação que falha (sem conexão / trava ocupada pela sincronização) é repetida sozinha, e fechar o app avisa
+assert.ok(cli.includes("tRetry=setTimeout(gravar,"), "nova tentativa automática de gravar sumiu");
+assert.ok(cli.includes("addEventListener('beforeunload'"), "aviso ao fechar com alteração pendente sumiu");
+
+// 11. normalizar aceita lixo
 assert.ok(E.normalizar(null).feriados.length > 0);
 assert.ok(E.normalizar('x').ciclos.length === 0);
 

@@ -937,11 +937,11 @@ function salvarForm_(velho,antes){
 }
 
 /* ---------- salvar no servidor e sincronizar a Agenda ---------- */
-let gravando=false,denovo=false,tSave=null,syncPend=false,tSync=null,sincronizando=false,ressync=false;
+let gravando=false,denovo=false,tSave=null,tRetry=null,falhas=0,syncPend=false,tSync=null,sincronizando=false,ressync=false;
 function salvar(agenda){
   if(agenda!==false)syncPend=true;
   setStatus('salvando');
-  clearTimeout(tSave);
+  clearTimeout(tSave);clearTimeout(tRetry);
   tSave=setTimeout(()=>{tSave=null;gravar();},600);
 }
 async function gravar(){
@@ -953,7 +953,13 @@ async function gravar(){
     if(r.choque||r.limite){S=normalizar(r.estado);syncPend=false;setStatus('ok');render();toast('Não salvei: '+r.msg);}
     else if(r.conflito){S=normalizar(r.estado);syncPend=false;ui.draft=null;setStatus('ok');render();toast('Seus dados mudaram em outro aparelho. Refaça a última alteração.');}
     else{S.rev=r.rev;setStatus('ok');if(syncPend){syncPend=false;agendarSync(1200);}}
-  }catch(e){setStatus('erro');toast('Não consegui salvar. Verifique a conexão e tente de novo.');}
+    falhas=0;
+  }catch(e){
+    // sem conexão ou servidor ocupado (ex.: sincronização longa da agenda): a alteração continua só aqui, então tenta de novo sozinho
+    falhas++;setStatus('erro');
+    if(falhas===1)toast('Ainda não salvei. Vou tentar de novo sozinho; não feche o app.');
+    clearTimeout(tRetry);tRetry=setTimeout(gravar,Math.min(30000,3000*falhas));
+  }
   gravando=false;
   if(denovo){denovo=false;gravar();}
 }
@@ -1046,7 +1052,7 @@ function exportar(){
   catch(e){toast('Não foi possível exportar.');}
 }
 async function apagarTudo(){
-  clearTimeout(tSave);clearTimeout(tSync);syncPend=false;setStatus('salvando');
+  clearTimeout(tSave);clearTimeout(tSync);clearTimeout(tRetry);falhas=0;syncPend=false;setStatus('salvando');
   try{
     await gs('api_apagarTudo');
     S=PADRAO();ui.wizard=true;ui.sync={estado:'idle'};ui.imp=null;ui.draft=null;ui.editId=null;ui.aba='hoje';setStatus('ok');render();setStatusAg();
@@ -1206,6 +1212,8 @@ document.addEventListener('change',e=>{
   }
   if(t.id==='c-desde'&&ui.draft){ui.draft.desde=t.value||ui.draft.desde;const pv=$('#previa');if(pv)pv.innerHTML=previaCiclo(ui.draft.seq,ui.draft.desde);}
 });
+// avisa antes de fechar com alteração ainda não salva
+window.addEventListener('beforeunload',e=>{if(tSave||gravando||falhas){e.preventDefault();e.returnValue='';}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden)fecharSheet();});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ui.aba==='hoje'&&!ui.carregando&&$('#sheet').hidden)render();});
 setInterval(()=>{if(ui.aba==='hoje'&&!ui.carregando&&!ui.wizard&&$('#sheet').hidden&&!document.hidden)render();},30000);

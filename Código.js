@@ -347,7 +347,7 @@ function srvChoqueNovo_(anterior, novo) {
 
 function api_salvar(estado, revBase) {
   const lock = LockService.getUserLock();
-  lock.waitLock(20000);
+  lock.waitLock(60000); // a sincronização da agenda pode segurar a trava por ~40s (lote de LOTE_OPS operações)
   try {
     const atual = srvLerEstado_();
     const revAtual = atual ? (atual.rev || 0) : 0;
