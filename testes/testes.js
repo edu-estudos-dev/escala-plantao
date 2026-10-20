@@ -4,14 +4,18 @@ const fs = require('fs'), path = require('path'), vm = require('vm'), assert = r
 const raiz = path.join(__dirname, '..');
 const srv = fs.readFileSync(path.join(raiz, 'Código.js'), 'utf8');
 const cli = fs.readFileSync(path.join(raiz, 'Index.html'), 'utf8');
-const bloco = t => t.slice(t.indexOf('//#UTIL-START'), t.indexOf('//#ENGINE-END'));
+const bloco = t => {
+  const i = t.indexOf('//#UTIL-START'), f = t.indexOf('//#ENGINE-END');
+  assert.ok(i >= 0 && f > i, 'marcadores //#UTIL-START e //#ENGINE-END não encontrados');
+  return t.slice(i, f);
+};
 
 // 1. o motor é igual no servidor e no cliente
 assert.strictEqual(bloco(srv), bloco(cli), 'bloco UTIL/ENGINE diferente entre Código.js e Index.html');
 
 // carrega Código.js com PropertiesService e Utilities falsos, numa data fixa
 function carregar(ano) {
-  const props = {};
+  const props = {}, gatilhos = [{ getHandlerFunction: () => 'sincronizarDiario' }];
   const RealDate = Date;
   class D extends RealDate { constructor(...a) { a.length ? super(...a) : super(ano, 5, 1); } }
   D.UTC = RealDate.UTC; D.now = () => new D().getTime();
@@ -26,10 +30,11 @@ function carregar(ano) {
     }) },
     Utilities: { newBlob: s => ({ getBytes: () => Buffer.from(s, 'utf8') }) },
     LockService: { getUserLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    ScriptApp: { getProjectTriggers: () => gatilhos.slice(), deleteTrigger: g => gatilhos.splice(gatilhos.indexOf(g), 1) },
   };
   vm.createContext(ctx);
-  vm.runInContext(srv + ';this.E={pascoa,feriadosDoAno,PADRAO,srvNormalizar_,srvLerEstado_,srvGravarEstado_,api_salvar,TITULO_APP,calcDRSO,mkTurno,setS:x=>{S=x}};', ctx);
-  return { E: ctx.E, props };
+  vm.runInContext(srv + ';this.E={pascoa,feriadosDoAno,PADRAO,normalizar,srvLerEstado_,srvGravarEstado_,api_salvar,sincronizarDiario,TITULO_APP,calcDRSO,mkTurno,setS:x=>{S=x}};', ctx);
+  return { E: ctx.E, props, gatilhos };
 }
 
 // 2. feriados: Páscoa e regra igual à lista fixa antiga de 2026–2027
@@ -42,11 +47,11 @@ assert.deepStrictEqual(E.PADRAO().feriados, ANTIGA);
 // usuário antigo (sem ferAnos) que removeu 20/11/2026 abre em 2028: ganha 2028–2029, não recupera o removido
 {
   const { E } = carregar(2028);
-  const o = E.srvNormalizar_({ ciclos: [], eventos: [], feriados: ANTIGA.filter(d => d !== '2026-11-20') });
+  const o = E.normalizar({ ciclos: [], eventos: [], feriados: ANTIGA.filter(d => d !== '2026-11-20') });
   assert.ok(!o.feriados.includes('2026-11-20'));
   assert.ok(o.feriados.includes('2028-04-14') && o.feriados.includes('2029-03-30'));
   assert.deepStrictEqual(Array.from(o.ferAnos), [2026, 2027, 2028, 2029]);
-  const o2 = E.srvNormalizar_(Object.assign({}, o, { feriados: o.feriados.filter(d => d !== '2028-04-14') }));
+  const o2 = E.normalizar(Object.assign({}, o, { feriados: o.feriados.filter(d => d !== '2028-04-14') }));
   assert.ok(!o2.feriados.includes('2028-04-14'), 'feriado removido voltou');
 }
 
@@ -72,11 +77,25 @@ assert.deepStrictEqual(E.PADRAO().feriados, ANTIGA);
   assert.strictEqual(lido.eventos.length, 200);
   assert.ok(!('nev' in lido));
   const grande = Object.assign({}, estado, { eventos: Array.from({ length: 2400 }, (_, i) => ev(i)) });
-  assert.throws(() => E.srvGravarEstado_(grande, 2), /Espaço de armazenamento cheio/);
+  const r = E.api_salvar(grande, 1);
+  assert.ok(r.limite && /Espaço de armazenamento cheio/.test(r.msg), 'deveria devolver limite');
+  assert.strictEqual(r.estado.eventos.length, 200, 'deveria devolver o estado salvo');
+  assert.strictEqual(E.srvLerEstado_().rev, 1, 'nada deveria ter sido gravado');
 }
 
 // 5. limpeza da agenda só reconhece títulos que o app cria
 ['Plantão — DIA', 'Plantão — NOITE', 'DRSO — 6h', 'DRSO — 7,5h', 'Plantão (permuta com João)'].forEach(t => assert.ok(E.TITULO_APP.test(t), t));
 ['Plantão extra combinado', 'Plantão', 'DRSO — reunião'].forEach(t => assert.ok(!E.TITULO_APP.test(t), t));
+
+// 6. gatilho diário se remove quando não há escala configurada
+{
+  const { E, gatilhos } = carregar(2026);
+  E.sincronizarDiario();
+  assert.strictEqual(gatilhos.length, 0);
+}
+
+// 7. normalizar aceita lixo
+assert.ok(E.normalizar(null).feriados.length > 0);
+assert.ok(E.normalizar('x').ciclos.length === 0);
 
 console.log('ok');

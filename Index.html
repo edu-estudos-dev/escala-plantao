@@ -251,6 +251,19 @@ function normFeriados(o,d){
 }
 const PADRAO=()=>semearFeriados({v:1,horarios:{dia:['05:00','17:00'],noite:['17:00','05:00']},ciclos:[],alertas:{dia:[600,120],noite:[1440,180]},valorHora:null,feriados:[],ferAnos:[],feriadosSem:[],eventos:[],rev:0});
 let S=PADRAO();
+/** Completa e corrige o estado salvo (d), igual no servidor e no cliente. */
+function normalizar(d){
+  const b=PADRAO();if(!d||typeof d!=='object')return b;
+  const o=Object.assign(b,d);
+  if(!Array.isArray(o.eventos))o.eventos=[];
+  if(!Array.isArray(o.ciclos))o.ciclos=[];
+  if(!o.horarios||!o.horarios.dia||!o.horarios.noite)o.horarios=PADRAO().horarios;
+  if(!o.alertas||!o.alertas.dia||!o.alertas.noite)o.alertas=PADRAO().alertas;
+  normFeriados(o,d);
+  if(!Array.isArray(o.feriadosSem))o.feriadosSem=[];
+  if(o.valorHora===undefined)o.valorHora=null;
+  return o;
+}
 
 function baseDoDia(s){
   const cs=S.ciclos.slice().sort((a,b)=>a.desde<b.desde?-1:1);
@@ -918,18 +931,6 @@ function salvarForm_(velho,antes){
 
 /* ---------- salvar no servidor e sincronizar a Agenda ---------- */
 let gravando=false,denovo=false,tSave=null,syncPend=false,tSync=null,sincronizando=false,ressync=false;
-function normalizar(d){
-  const b=PADRAO();if(!d||typeof d!=='object')return b;
-  const o=Object.assign(b,d);
-  if(!Array.isArray(o.eventos))o.eventos=[];
-  if(!Array.isArray(o.ciclos))o.ciclos=[];
-  if(!o.horarios||!o.horarios.dia||!o.horarios.noite)o.horarios=PADRAO().horarios;
-  if(!o.alertas||!o.alertas.dia||!o.alertas.noite)o.alertas=PADRAO().alertas;
-  normFeriados(o,d);
-  if(!Array.isArray(o.feriadosSem))o.feriadosSem=[];
-  if(o.valorHora===undefined)o.valorHora=null;
-  return o;
-}
 function salvar(agenda){
   if(agenda!==false)syncPend=true;
   setStatus('salvando');
@@ -941,10 +942,11 @@ async function gravar(){
   gravando=true;
   try{
     const r=await gs('api_salvar',clone(S),S.rev||0);
-    if(r.choque){S=normalizar(r.estado);syncPend=false;setStatus('ok');render();toast('Não salvei: '+r.msg);}
+    // choque ou limite de espaço: nada foi gravado, então volta ao que está salvo no servidor
+    if(r.choque||r.limite){S=normalizar(r.estado);syncPend=false;setStatus('ok');render();toast('Não salvei: '+r.msg);}
     else if(r.conflito){S=normalizar(r.estado);syncPend=false;ui.draft=null;setStatus('ok');render();toast('Seus dados mudaram em outro aparelho. Refaça a última alteração.');}
     else{S.rev=r.rev;setStatus('ok');if(syncPend){syncPend=false;agendarSync(1200);}}
-  }catch(e){const m=msgErro(e);setStatus('erro');toast('Não consegui salvar. '+(/Exclua|grande demais/.test(m)?m:'Verifique a conexão e tente de novo.'));}
+  }catch(e){setStatus('erro');toast('Não consegui salvar. Verifique a conexão e tente de novo.');}
   gravando=false;
   if(denovo){denovo=false;gravar();}
 }

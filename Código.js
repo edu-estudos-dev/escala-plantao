@@ -53,6 +53,19 @@ function normFeriados(o,d){
 }
 const PADRAO=()=>semearFeriados({v:1,horarios:{dia:['05:00','17:00'],noite:['17:00','05:00']},ciclos:[],alertas:{dia:[600,120],noite:[1440,180]},valorHora:null,feriados:[],ferAnos:[],feriadosSem:[],eventos:[],rev:0});
 let S=PADRAO();
+/** Completa e corrige o estado salvo (d), igual no servidor e no cliente. */
+function normalizar(d){
+  const b=PADRAO();if(!d||typeof d!=='object')return b;
+  const o=Object.assign(b,d);
+  if(!Array.isArray(o.eventos))o.eventos=[];
+  if(!Array.isArray(o.ciclos))o.ciclos=[];
+  if(!o.horarios||!o.horarios.dia||!o.horarios.noite)o.horarios=PADRAO().horarios;
+  if(!o.alertas||!o.alertas.dia||!o.alertas.noite)o.alertas=PADRAO().alertas;
+  normFeriados(o,d);
+  if(!Array.isArray(o.feriadosSem))o.feriadosSem=[];
+  if(o.valorHora===undefined)o.valorHora=null;
+  return o;
+}
 
 function baseDoDia(s){
   const cs=S.ciclos.slice().sort((a,b)=>a.desde<b.desde?-1:1);
@@ -283,21 +296,9 @@ function srvLerEstado_() {
   return cfg;
 }
 
-function srvNormalizar_(d) {
-  const b = PADRAO();
-  const o = Object.assign(b, d || {});
-  if (!Array.isArray(o.eventos)) o.eventos = [];
-  if (!Array.isArray(o.ciclos)) o.ciclos = [];
-  if (!o.horarios || !o.horarios.dia || !o.horarios.noite) o.horarios = PADRAO().horarios;
-  if (!o.alertas || !o.alertas.dia || !o.alertas.noite) o.alertas = PADRAO().alertas;
-  normFeriados(o, d);
-  if (!Array.isArray(o.feriadosSem)) o.feriadosSem = [];
-  if (o.valorHora === undefined) o.valorHora = null;
-  return o;
-}
-
+/** Grava o estado. Devolve a mensagem para o usuário se passar de algum limite (nada é gravado), ou null. */
 function srvGravarEstado_(novo, rev) {
-  if (novo.eventos.length > MAX_EVENTOS) throw new Error('Lançamentos demais. Exclua os mais antigos.');
+  if (novo.eventos.length > MAX_EVENTOS) return 'Lançamentos demais. Exclua os mais antigos.';
   const blocos = [];
   let atual = [], tam = 2;
   novo.eventos.forEach(function (e) {
@@ -308,19 +309,20 @@ function srvGravarEstado_(novo, rev) {
   if (atual.length) blocos.push(atual);
   const cfg = { v: 1, horarios: novo.horarios, ciclos: novo.ciclos, alertas: novo.alertas, valorHora: novo.valorHora, feriados: novo.feriados, ferAnos: novo.ferAnos, feriadosSem: novo.feriadosSem || [], rev: rev, nev: blocos.length };
   const cfgTxt = JSON.stringify(cfg);
-  if (cfgTxt.length > TAM_BLOCO) throw new Error('Configuração grande demais.');
+  if (cfgTxt.length > TAM_BLOCO) return 'Configuração grande demais.';
   const props = srvProps_();
   const antigos = Object.keys(props.getProperties());
   const grava = { cfg: cfgTxt };
   blocos.forEach(function (b, i) { grava['ev' + i] = JSON.stringify(b); });
   // o Google limita as propriedades do usuário a ~500 KB no total; avisa antes de estourar
-  const bytes = Object.keys(grava).reduce(function (a, k) { return a + Utilities.newBlob(k + grava[k]).getBytes().length; }, 0);
-  if (bytes > LIMITE_BYTES) throw new Error('Espaço de armazenamento cheio. Exclua lançamentos antigos.');
+  const bytes = Utilities.newBlob(Object.keys(grava).map(function (k) { return k + grava[k]; }).join('')).getBytes().length;
+  if (bytes > LIMITE_BYTES) return 'Espaço de armazenamento cheio. Exclua lançamentos antigos.';
   // cfg e blocos vão numa só gravação; cfg.nev faz a leitura ignorar blocos velhos se a limpeza abaixo falhar
   props.setProperties(grava, false);
   antigos.forEach(function (k) {
     if (/^ev\d+$/.test(k) && !(k in grava)) props.deleteProperty(k);
   });
+  return null;
 }
 
 function api_carregar() {
@@ -333,7 +335,7 @@ function api_carregar() {
 function srvChoqueNovo_(anterior, novo) {
   const bak = S;
   try {
-    S = anterior ? srvNormalizar_(anterior) : PADRAO();
+    S = anterior ? normalizar(anterior) : PADRAO();
     const antes = chavesChoque();
     S = novo;
     const nc = novosChoques(antes);
@@ -350,11 +352,12 @@ function api_salvar(estado, revBase) {
     const atual = srvLerEstado_();
     const revAtual = atual ? (atual.rev || 0) : 0;
     if ((revBase || 0) !== revAtual) return { conflito: true, estado: atual };
-    const novo = srvNormalizar_(estado);
+    const novo = normalizar(estado);
     const bloqueio = srvChoqueNovo_(atual, novo);
     if (bloqueio) return { choque: true, msg: bloqueio, estado: atual };
     const rev = revAtual + 1;
-    srvGravarEstado_(novo, rev);
+    const limite = srvGravarEstado_(novo, rev);
+    if (limite) return { limite: true, msg: limite, estado: atual };
     return { ok: true, rev: rev };
   } finally {
     lock.releaseLock();
@@ -425,6 +428,8 @@ function srvLimite_(e) {
   return /muitas agendas|muitos eventos|too many calendars|too many events|rate limit/i.test(String((e && e.message) || e));
 }
 
+function srvConfigurado_(estado) { return !!(estado && estado.ciclos && estado.ciclos.length); }
+
 function srvGarantirGatilho_() {
   const ja = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'sincronizarDiario'; });
   if (!ja) ScriptApp.newTrigger('sincronizarDiario').timeBased().everyDays(1).atHour(3).create();
@@ -436,8 +441,8 @@ function srvGarantirGatilho_() {
  */
 function srvSincronizar_() {
   const estado = srvLerEstado_();
-  if (!estado || !estado.ciclos || !estado.ciclos.length) throw new Error('Escala ainda não configurada.');
-  S = srvNormalizar_(estado);
+  if (!srvConfigurado_(estado)) throw new Error('Escala ainda não configurada.');
+  S = normalizar(estado);
   const cal = srvAgenda_();
   const tz = cal.getTimeZone();
   const hojeStr = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
@@ -514,6 +519,11 @@ function api_sincronizar() {
 function sincronizarDiario() {
   const t0 = Date.now();
   try {
+    // sem escala configurada (dados apagados) não há o que manter: remove o próprio gatilho em vez de falhar todo dia
+    if (!srvConfigurado_(srvLerEstado_())) {
+      ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'sincronizarDiario') ScriptApp.deleteTrigger(t); });
+      return;
+    }
     let r;
     do {
       const lock = LockService.getUserLock();
@@ -522,12 +532,6 @@ function sincronizarDiario() {
       if (r.pendente > 0) Utilities.sleep(r.limite ? 60000 : 2000);
     } while (r.pendente > 0 && Date.now() - t0 < 240000);
   } catch (e) {
-    const msg = String((e && e.message) || e);
-    // sem escala configurada (dados apagados) não há o que manter: remove o próprio gatilho em vez de falhar todo dia
-    if (/Escala ainda não configurada/.test(msg)) {
-      ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'sincronizarDiario') ScriptApp.deleteTrigger(t); });
-      return;
-    }
-    srvProps_().setProperty('sync', JSON.stringify({ erro: msg, quando: new Date().toISOString() }));
+    srvProps_().setProperty('sync', JSON.stringify({ erro: String((e && e.message) || e), quando: new Date().toISOString() }));
   }
 }
