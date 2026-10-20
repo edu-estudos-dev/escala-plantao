@@ -367,7 +367,7 @@ function api_salvar(estado, revBase) {
 /** Apaga tudo do usuário: configuração, lançamentos, a agenda "Plantão" e o gatilho diário. O app volta à configuração inicial. */
 function api_apagarTudo() {
   const lock = LockService.getUserLock();
-  lock.waitLock(30000);
+  lock.waitLock(60000); // pode estar esperando uma sincronização longa da agenda
   try {
     const props = srvProps_();
     const id = props.getProperty('cal');
