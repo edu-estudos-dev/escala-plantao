@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "previa",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["testes/previa.js"],
+      "port": 5173
+    }
+  ]
+}

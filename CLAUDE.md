@@ -27,6 +27,8 @@ Cada pessoa abre o app com a própria conta Google (`executeAs: USER_ACCESSING`,
 
 **Importante:** o bloco entre `//#UTIL-START` e `//#ENGINE-END` precisa ficar igual nos dois arquivos. Toda mudança no motor deve ser feita nos dois.
 
+- `testes/previa.js`: prévia local sem Apps Script (`node testes/previa.js`, ou a configuração "previa" do `.claude/launch.json`). Serve o `Index.html` com um `google.script.run` falso e dados de exemplo em http://localhost:5173; `?vazio` abre a configuração inicial. Use para conferir o visual antes de publicar.
+- Visual ("livro de serviço"): fontes Big Shoulders Display (títulos e números), Public Sans (texto) e Red Hat Mono (horários); dourado (`--ouro`) como marca; uma cor por tipo (dia âmbar, noite azul-aço, DRSO laranja, permuta verde-azulado); réguas em vez de caixas com borda. As cores ficam em variáveis no `:root`, com tema claro e escuro.
 - `testes/testes.js`: confere se o motor está igual nos dois arquivos e testa feriados, cálculo de DRSO, armazenamento em blocos e os títulos de evento. Rode `node testes/testes.js` antes de qualquer `clasp push`. O `.claspignore` mantém a pasta fora do Apps Script.
 - Feriados: `feriadosDoAno(ano)` gera as datas fixas mais a Sexta-feira Santa. `ferAnos` guarda os anos que já foram adicionados aos dados do usuário, para não trazer de volta um feriado que ele removeu.
 - Armazenamento: `cfg.nev` diz quantos blocos `evN` valem. Ao ler, blocos acima disso são ignorados. Há um limite de espaço em `LIMITE_BYTES`, abaixo dos ~500 KB que o Google permite.
