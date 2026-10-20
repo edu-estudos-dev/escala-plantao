@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comparar fontes</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Schibsted+Grotesk:wght@600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Public+Sans:wght@400;500;600;700;800&family=Red+Hat+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0C0E11;--surface:#15181D;--line:#262B33;--rule:#353B45;--fg:#ECE8DF;--muted:#8E929A;--ouro:#E6B43C;
+  --dia:#F2B640;--dia-bg:#2C2410;--dia-fg:#F8D78F;--noite:#8C9DFF;--noite-bg:#181D3A;--noite-fg:#CBD3FF}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.5 'Public Sans',sans-serif;padding:16px}
+.grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:900px;margin:0 auto}
+.op{border:1px solid var(--rule);border-radius:8px;padding:14px}
+.nome{font:600 12px 'Red Hat Mono',monospace;color:var(--ouro);margin-bottom:10px}
+.hero{position:relative;background:var(--noite-bg);color:var(--noite-fg);border-radius:6px;padding:14px 14px 12px 18px;overflow:hidden}
+.hero::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--noite)}
+.rot{font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;opacity:.8}
+.grande{font-weight:800;font-size:46px;line-height:1;margin:6px 0 10px;letter-spacing:-.02em}
+.hora{font:500 15px 'Red Hat Mono',monospace;display:flex;gap:8px;align-items:center}
+.tag{font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:1px 7px;border-radius:3px;background:var(--noite);color:#0D1233}
+.tag.d{background:var(--dia);color:#241800}
+h2{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px;letter-spacing:.06em;text-transform:uppercase;margin:18px 0 8px}
+h2::after{content:"";flex:1;height:1px;background:var(--rule)}
+.strip{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.dc{display:flex;flex-direction:column;align-items:center;padding:5px 0 4px;border-radius:4px;background:var(--dia-bg);color:var(--dia-fg);box-shadow:inset 0 -3px 0 var(--dia)}
+.dc.n{background:var(--noite-bg);color:var(--noite-fg);box-shadow:inset 0 -3px 0 var(--noite)}
+.dc.f{background:var(--surface);color:var(--muted);box-shadow:inset 0 0 0 1px var(--line)}
+.dc .w{font-weight:700;font-size:10px;text-transform:uppercase;opacity:.75}
+.dc .num{font-weight:800;font-size:22px;line-height:1.1}
+.dc .t{font:500 9px 'Red Hat Mono',monospace}
+.lin{display:flex;align-items:center;gap:10px;padding:10px 0 10px 10px;border-bottom:1px solid var(--line);position:relative}
+.lin::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;background:var(--dia)}
+.lin .d{font-weight:700;font-size:17px;min-width:120px}
+.lin .tag{flex:none}
+.lin .h{margin-left:auto;font:500 13px 'Red Hat Mono',monospace;color:var(--muted)}
+.tit{font-weight:800;font-size:32px;line-height:1;margin:16px 0 0}
+</style>
+</head>
+<body>
+<div class="grade" id="g"></div>
+<script>
+const OPS=[['A · Archivo',"'Archivo'"],['B · Schibsted Grotesk',"'Schibsted Grotesk'"],['C · Bricolage Grotesque',"'Bricolage Grotesque'"],['D · Public Sans (uma fonte só)',"'Public Sans'"]];
+document.getElementById('g').innerHTML=OPS.map(([n,f])=>`<section class="op" style="--f:${f}">
+<p class="nome">${n}</p>
+<div style="font-family:${f}">
+<div class="hero"><p class="rot">Próximo serviço</p><p class="grande">Amanhã</p><p class="hora"><span class="tag">Noite</span>17:00 → 05:00</p></div>
+<h2>Próximos 14 dias</h2>
+<div class="strip"><div class="dc"><span class="w">ter</span><span class="num">20</span><span class="t">DIA</span></div><div class="dc n"><span class="w">qua</span><span class="num">21</span><span class="t">NOITE</span></div><div class="dc f"><span class="w">qui</span><span class="num">22</span><span class="t">sai 05h</span></div><div class="dc f"><span class="w">sex</span><span class="num">23</span><span class="t">FOLGA</span></div><div class="dc"><span class="w">sáb</span><span class="num">24</span><span class="t">DIA</span></div></div>
+<h2>Próximos serviços</h2>
+<div class="lin"><span class="d">Sábado, 24/10</span><span class="tag d">Dia</span><span class="h">05:00–17:00</span></div>
+<p class="tit">Outubro 2026</p>
+</div></section>`).join('');
+</script>
+</body>
+</html>

@@ -26,6 +26,10 @@ window.google={script:{run:mk(()=>{},()=>{})}};
 </script>`;
 
 http.createServer((req, res) => {
+  if (req.url.startsWith('/fontes')) { // comparação de fontes (testes/fontes.html)
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    return res.end(fs.readFileSync(path.join(__dirname, 'fontes.html')));
+  }
   const html = fs.readFileSync(path.join(__dirname, '..', 'Index.html'), 'utf8').replace('<base target="_top">', '<base target="_top">' + STUB);
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
   res.end(html);
