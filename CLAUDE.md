@@ -39,3 +39,10 @@ diff <(sed -n '/\/\/#UTIL-START/,/\/\/#ENGINE-END/p' Código.js) <(sed -n '/\/\/
 
 1. `clasp push` (só quando o usuário pedir).
 2. No editor do Apps Script: **Implantar > Gerenciar implantações**, editar a implantação existente e escolher **Nova versão**. Assim a URL do app continua a mesma.
+
+   Equivalente pelo terminal (mesmo efeito, mesma URL):
+   ```bash
+   clasp list-deployments                     # a de produção é a que não é @HEAD
+   clasp create-version "descrição"           # devolve o número N
+   clasp update-deployment <deploymentId> -V N -d "descrição"
+   ```
