@@ -33,8 +33,24 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 function fmtH(h){const a=Math.abs(h);const hh=Math.floor(a+1e-9);const mm=Math.round((a-hh)*60);return(h<0?'-':'')+hh+'h'+(mm?pad(mm):'');}
 function diffTxt(ms){const min=Math.max(0,Math.round(ms/60000));const d=Math.floor(min/1440),h=Math.floor((min%1440)/60),m=min%60;if(d>0)return d+'d '+h+'h';if(h>0)return h+'h '+pad(m)+'min';return m+'min';}
 
-const FERIADOS_PADRAO=()=>['2026-01-01','2026-03-25','2026-04-03','2026-04-13','2026-04-21','2026-05-01','2026-08-15','2026-09-07','2026-10-12','2026-11-02','2026-11-15','2026-11-20','2026-12-25','2027-01-01','2027-03-25','2027-03-26','2027-04-13','2027-04-21','2027-05-01','2027-08-15','2027-09-07','2027-10-12','2027-11-02','2027-11-15','2027-11-20','2027-12-25'];
-const PADRAO=()=>({v:1,horarios:{dia:['05:00','17:00'],noite:['17:00','05:00']},ciclos:[],alertas:{dia:[600,120],noite:[1440,180]},valorHora:null,feriados:FERIADOS_PADRAO(),feriadosSem:[],eventos:[],rev:0});
+/** Páscoa (algoritmo de Meeus/Jones/Butcher, calendário gregoriano). */
+function pascoa(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),n=h+l-7*m+114;return iso(y,Math.floor(n/31),(n%31)+1);}
+// nacionais, Data Magna do Ceará (25/03), aniversário de Fortaleza (13/04) e N. Sra. da Assunção (15/08); a Sexta-feira Santa é calculada
+const FERIADOS_FIXOS=['01-01','03-25','04-13','04-21','05-01','08-15','09-07','10-12','11-02','11-15','11-20','12-25'];
+const feriadosDoAno=y=>FERIADOS_FIXOS.map(md=>y+'-'+md).concat([addDias(pascoa(y),-2)]).sort();
+/** Acrescenta os feriados padrão do ano atual e do próximo, uma vez por ano (ferAnos), sem trazer de volta os que o usuário removeu. */
+function semearFeriados(o){
+  const y=Number(hojeISO().slice(0,4));
+  for(const a of [y,y+1]){if(o.ferAnos.indexOf(a)<0){o.feriados=Array.from(new Set(o.feriados.concat(feriadosDoAno(a)))).sort();o.ferAnos.push(a);}}
+  return o;
+}
+/** Normaliza feriados de dados salvos (d) já mesclados em o. */
+function normFeriados(o,d){
+  if(!Array.isArray(o.feriados)){o.feriados=[];o.ferAnos=[];}
+  else if(!Array.isArray((d||{}).ferAnos))o.ferAnos=[2026,2027]; // dados anteriores ao ferAnos já vinham com os feriados de 2026 e 2027
+  return semearFeriados(o);
+}
+const PADRAO=()=>semearFeriados({v:1,horarios:{dia:['05:00','17:00'],noite:['17:00','05:00']},ciclos:[],alertas:{dia:[600,120],noite:[1440,180]},valorHora:null,feriados:[],ferAnos:[],feriadosSem:[],eventos:[],rev:0});
 let S=PADRAO();
 
 function baseDoDia(s){
@@ -271,14 +287,14 @@ function srvNormalizar_(d) {
   if (!Array.isArray(o.ciclos)) o.ciclos = [];
   if (!o.horarios || !o.horarios.dia || !o.horarios.noite) o.horarios = PADRAO().horarios;
   if (!o.alertas || !o.alertas.dia || !o.alertas.noite) o.alertas = PADRAO().alertas;
-  if (!Array.isArray(o.feriados)) o.feriados = FERIADOS_PADRAO();
+  normFeriados(o, d);
   if (!Array.isArray(o.feriadosSem)) o.feriadosSem = [];
   if (o.valorHora === undefined) o.valorHora = null;
   return o;
 }
 
 function srvGravarEstado_(novo, rev) {
-  const cfg = { v: 1, horarios: novo.horarios, ciclos: novo.ciclos, alertas: novo.alertas, valorHora: novo.valorHora, feriados: novo.feriados, feriadosSem: novo.feriadosSem || [], rev: rev };
+  const cfg = { v: 1, horarios: novo.horarios, ciclos: novo.ciclos, alertas: novo.alertas, valorHora: novo.valorHora, feriados: novo.feriados, ferAnos: novo.ferAnos, feriadosSem: novo.feriadosSem || [], rev: rev };
   const cfgTxt = JSON.stringify(cfg);
   if (cfgTxt.length > TAM_BLOCO) throw new Error('Configuração grande demais.');
   if (novo.eventos.length > MAX_EVENTOS) throw new Error('Lançamentos demais. Exclua os mais antigos.');
