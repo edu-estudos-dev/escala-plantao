@@ -552,6 +552,7 @@ function viewWizard(){
   '<label class="fld"><span>Em que data</span><input type="date" data-w="data" value="'+h+'"></label>'+
   '<div class="duo"><label class="fld"><span>Dia · início</span>'+tin('di','05:00')+'</label><label class="fld"><span>Dia · fim</span>'+tin('df','17:00')+'</label></div>'+
   '<div class="duo"><label class="fld"><span>Noite · início</span>'+tin('ni','17:00')+'</label><label class="fld"><span>Noite · fim</span>'+tin('nf','05:00')+'</label></div>'+
+  '<label class="fld"><span>Valor da sua hora de DRSO (R$)</span><input type="text" inputmode="decimal" data-w="vh" placeholder="depende da graduação; pode deixar para depois"></label>'+
   '<p class="dica">O app cria uma agenda chamada <b>Plantão</b> no seu Google Agenda, com avisos antes de cada serviço. Os avisos podem ser ajustados depois, em Ajustes.</p>'+
   '<button class="btn" style="margin-top:16px;width:100%" data-act="wz-ok">Criar minha escala e agenda</button></div>';
 }
@@ -802,7 +803,11 @@ function viewAjustes(){
   '<h2 class="sec">Ciclo da escala</h2><div class="card"><p>Toque em cada posição para alternar entre dia, noite e folga. Cada posição é um dia do calendário.</p><div class="seq">'+ui.draft.seq.map(seqChip).join('')+'</div><div class="acoes"><button class="btn mini sec" data-act="seq+">+ posição</button><button class="btn mini sec" data-act="seq-">− posição</button></div>'+
   '<label class="fld"><span>A posição 1 cai em</span><input type="date" id="c-desde" value="'+esc(ui.draft.desde)+'"></label><div id="previa" style="margin-top:12px">'+previaCiclo(ui.draft.seq,ui.draft.desde)+'</div><p class="dica">Valem a partir da data escolhida. O passado continua como estava.</p><button class="btn" style="margin-top:12px;width:100%" data-act="salvar-ciclo">Salvar novo ciclo</button></div>'+
   '<h2 class="sec">Ciclos registrados</h2><div class="lista">'+S.ciclos.slice().sort((a,b)=>a.desde<b.desde?-1:1).map(c=>'<div class="lin"><span class="d" style="min-width:0">'+fmtBR(c.desde)+'</span><span class="mono muted" style="font-size:12px">'+c.seq.map(x=>x[0].toUpperCase()).join(' ')+'</span>'+(S.ciclos.length>1?'<button class="btn mini sec" style="margin-left:auto" data-act="del-ciclo" data-arg="'+c.desde+'">Remover</button>':'')+'</div>').join('')+'</div>'+
-  '<h2 class="sec">Onde ficam os dados</h2><p class="muted">Salvos na sua conta Google, dentro deste aplicativo. Só você tem acesso aos seus lançamentos.</p>';
+  '<h2 class="sec">Seus dados</h2><div class="card"><p class="muted">Salvos na sua conta Google, dentro deste aplicativo. Só você tem acesso aos seus lançamentos. Exporte uma cópia de vez em quando: o arquivo restaura tudo se algo der errado ou se você trocar de conta.</p>'+
+  '<div class="acoes"><button class="btn mini sec" data-act="exportar">Exportar cópia</button><label class="btn mini sec" style="cursor:pointer">Importar cópia<input type="file" id="imp" accept=".json,application/json" hidden></label></div>'+
+  (ui.imp?'<p class="dica">O arquivo tem '+ui.imp.ciclos.length+' ciclo(s) e '+ui.imp.eventos.length+' lançamento(s). Importar <b>substitui tudo</b> o que está no app.</p><div class="acoes"><button class="btn mini perigo" data-act="imp-ok">Confirmar importação</button><button class="btn mini sec" data-act="imp-cancelar">Cancelar</button></div>':'')+
+  '<div class="acoes" style="margin-top:12px">'+(ui.confirmApagar?'<button class="btn mini perigo" data-act="apagar-tudo">Confirmar: apagar tudo</button><button class="btn mini sec" data-act="apagar-cancelar">Cancelar</button>':'<button class="btn mini sec" data-act="apagar-tudo">Apagar todos os dados</button>')+'</div>'+
+  (ui.confirmApagar?'<p class="dica">Apaga a escala, todos os lançamentos e a agenda <b>Plantão</b> do Google Agenda. Não dá para desfazer, a não ser importando uma cópia.</p>':'')+'</div>';
 }
 const VIEWS={hoje:viewHoje,mes:viewMes,lancar:viewLancar,saldos:viewSaldos,ajustes:viewAjustes};
 const ABAS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'],['mes','Mês','<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'],['lancar','Lançar','<path d="M12 5v14M5 12h14"/>'],['saldos','Saldos','<path d="M4 19h16M7 16V9M12 16V5M17 16v-4"/>'],['ajustes','Ajustes','<path d="M4 7h10M18 7h2M4 17h2M10 17h10M16 5v4M8 15v4"/>']];
@@ -1010,14 +1015,41 @@ function csvMes(ano,mes){
   lin.push([q('Ainda a pagar'),q(brl(rl.aPagar))].join(';'));
   return '﻿'+lin.join('\r\n');
 }
+function baixarArquivo(nome,txt,tipo){
+  const blob=new Blob([txt],{type:tipo});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=nome;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+}
 function baixarCSV(nome,txt){
   try{
-    const blob=new Blob([txt],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');a.href=url;a.download=nome;document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),3000);
+    baixarArquivo(nome,txt,'text/csv;charset=utf-8');
     toast('Planilha gerada. Se não baixar, use "Copiar resumo".');
   }catch(e){toast('Não foi possível baixar. Use "Copiar resumo".');}
+}
+const TIPOS_EV=['extra','permuta_assumi','permuta_cedi','dispensa','licenca','banco'];
+/** Aceita a cópia exportada pelo app ({app, dados}) ou o estado puro. Devolve o estado ou null se o arquivo não for válido. */
+function lerCopia(txt){
+  let j;try{j=JSON.parse(txt);}catch(e){return null;}
+  const d=j&&j.app==='escala-plantao'?j.dados:j;
+  if(!d||typeof d!=='object'||!Array.isArray(d.ciclos)||!d.ciclos.length||!Array.isArray(d.eventos))return null;
+  const ehData=s=>/^\d{4}-\d\d-\d\d$/.test(s);
+  if(!d.ciclos.every(c=>c&&ehData(c.desde)&&Array.isArray(c.seq)&&c.seq.length))return null;
+  if(!d.eventos.every(e=>e&&typeof e.id==='string'&&TIPOS_EV.indexOf(e.tipo)>=0&&ehData(e.data)))return null;
+  return d;
+}
+function exportar(){
+  const d=clone(S);delete d.rev;
+  try{baixarArquivo('escala-plantao-'+hojeISO()+'.json',JSON.stringify({app:'escala-plantao',exportadoEm:new Date().toISOString(),dados:d},null,1),'application/json');toast('Cópia exportada. Guarde o arquivo em lugar seguro.');}
+  catch(e){toast('Não foi possível exportar.');}
+}
+async function apagarTudo(){
+  clearTimeout(tSave);clearTimeout(tSync);syncPend=false;setStatus('salvando');
+  try{
+    await gs('api_apagarTudo');
+    S=PADRAO();ui.wizard=true;ui.sync={estado:'idle'};ui.imp=null;ui.draft=null;ui.editId=null;ui.aba='hoje';setStatus('ok');render();setStatusAg();
+    toast('Dados apagados. Configure sua escala.');
+  }catch(e){setStatus('erro');toast('Não consegui apagar: '+msgErro(e));}
 }
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]');if(!el)return;
@@ -1074,6 +1106,17 @@ document.addEventListener('click',e=>{
       ui.confirmDel=null;salvar(agenda);render();toast('Lançamento excluído.',i>=0?['desfazer','Desfazer']:null);break;
     }
     case'copiar-resumo':copiar(resumoTexto(ui.ano,ui.mes),'Resumo copiado.');break;
+    case'exportar':exportar();break;
+    case'imp-cancelar':ui.imp=null;render();break;
+    case'imp-ok':{
+      if(!ui.imp)break;
+      const rev=S.rev;S=normalizar(ui.imp);S.rev=rev;ui.imp=null;ui.draft=null;ui.editId=null;
+      salvar();render();toast('Cópia importada. Atualizando a Agenda…');break;
+    }
+    case'apagar-cancelar':ui.confirmApagar=false;render();break;
+    case'apagar-tudo':
+      if(!ui.confirmApagar){ui.confirmApagar=true;render();break;}
+      ui.confirmApagar=false;apagarTudo();break;
     case'csv':baixarCSV('plantao-'+ui.ano+'-'+pad(ui.mes)+'.csv',csvMes(ui.ano,ui.mes));break;
     case'sync-agora':agendarSync(50);break;
     case'recarregar':iniciar();break;
@@ -1083,7 +1126,9 @@ document.addEventListener('click',e=>{
       if(!g.di||!g.df||!g.ni||!g.nf){toast('Preencha os horários dos turnos.');break;}
       if(g.di===g.df||g.ni===g.nf){toast('Início e fim do turno não podem ser iguais.');break;}
       const desde=g.tipo==='dia'?g.data:addDias(g.data,-1);
-      S=PADRAO();S.horarios={dia:[g.di,g.df],noite:[g.ni,g.nf]};S.ciclos=[{desde,seq:['dia','noite','folga','folga']}];
+      const vh=numBR(g.vh);
+      if(g.vh&&g.vh.trim()&&(vh===null||vh<=0)){toast('Informe um valor da hora válido, por exemplo 45,00, ou deixe em branco.');break;}
+      S=PADRAO();S.horarios={dia:[g.di,g.df],noite:[g.ni,g.nf]};S.ciclos=[{desde,seq:['dia','noite','folga','folga']}];S.valorHora=vh;
       ui.wizard=false;ui.aba='hoje';ui.draft=null;render();salvar();toast('Escala criada. Montando sua agenda…');break;
     }
     case'seq':{const i=+arg;const o=['dia','noite','folga'];ui.draft.seq[i]=o[(o.indexOf(ui.draft.seq[i])+1)%3];const d=$('#c-desde');if(d)ui.draft.desde=d.value||ui.draft.desde;render();break;}
@@ -1120,6 +1165,15 @@ document.addEventListener('click',e=>{
 document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.est)atualizarEst();});
 document.addEventListener('change',e=>{
   const t=e.target;
+  if(t.id==='imp'){
+    const f=t.files&&t.files[0];if(!f)return;
+    f.text().then(txt=>{
+      const d=lerCopia(txt);t.value='';
+      if(!d){toast('Esse arquivo não é uma cópia válida do app.');return;}
+      ui.imp=d;render();
+    },()=>toast('Não consegui ler o arquivo.'));
+    return;
+  }
   if(t.dataset&&t.dataset.rerender){lerForm();render();return;}
   if(t.dataset&&t.dataset.h){
     const p=t.dataset.h.split('|');const k=p[0],i=+p[1];

@@ -15,7 +15,7 @@ assert.strictEqual(bloco(srv), bloco(cli), 'bloco UTIL/ENGINE diferente entre C�
 
 // carrega Código.js com PropertiesService e Utilities falsos, numa data fixa
 function carregar(ano) {
-  const props = {}, gatilhos = [{ getHandlerFunction: () => 'sincronizarDiario' }];
+  const agendaApagada = [], props = {}, gatilhos = [{ getHandlerFunction: () => 'sincronizarDiario' }];
   const RealDate = Date;
   class D extends RealDate { constructor(...a) { a.length ? super(...a) : super(ano, 5, 1); } }
   D.UTC = RealDate.UTC; D.now = () => new D().getTime();
@@ -27,14 +27,16 @@ function carregar(ano) {
       setProperties: (o) => Object.assign(props, o),
       setProperty: (k, v) => { props[k] = v; },
       deleteProperty: k => { delete props[k]; },
+      deleteAllProperties: () => { Object.keys(props).forEach(k => delete props[k]); },
     }) },
     Utilities: { newBlob: s => ({ getBytes: () => Buffer.from(s, 'utf8') }) },
     LockService: { getUserLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    CalendarApp: { getCalendarById: id => (id === 'cal1' ? { deleteCalendar: () => { agendaApagada.push(id); } } : null) },
     ScriptApp: { getProjectTriggers: () => gatilhos.slice(), deleteTrigger: g => gatilhos.splice(gatilhos.indexOf(g), 1) },
   };
   vm.createContext(ctx);
-  vm.runInContext(srv + ';this.E={pascoa,feriadosDoAno,PADRAO,normalizar,srvLerEstado_,srvGravarEstado_,api_salvar,sincronizarDiario,TITULO_APP,calcDRSO,mkTurno,setS:x=>{S=x}};', ctx);
-  return { E: ctx.E, props, gatilhos };
+  vm.runInContext(srv + ';this.E={pascoa,feriadosDoAno,PADRAO,normalizar,srvLerEstado_,srvGravarEstado_,api_salvar,api_apagarTudo,sincronizarDiario,TITULO_APP,calcDRSO,mkTurno,setS:x=>{S=x}};', ctx);
+  return { E: ctx.E, props, gatilhos, agendaApagada };
 }
 
 // 2. feriados: Páscoa e regra igual à lista fixa antiga de 2026–2027
@@ -94,7 +96,33 @@ assert.deepStrictEqual(E.PADRAO().feriados, ANTIGA);
   assert.strictEqual(gatilhos.length, 0);
 }
 
-// 7. normalizar aceita lixo
+// 7. apagar tudo: limpa propriedades, apaga a agenda e o gatilho
+{
+  const { E, props, gatilhos, agendaApagada } = carregar(2026);
+  assert.ok(E.api_salvar(Object.assign(E.PADRAO(), { ciclos: [{ desde: '2026-01-01', seq: ['dia'] }] }), 0).ok);
+  props.cal = 'cal1';
+  assert.ok(E.api_apagarTudo().ok);
+  assert.deepStrictEqual(Object.keys(props), []);
+  assert.deepStrictEqual(agendaApagada, ['cal1']);
+  assert.strictEqual(gatilhos.length, 0);
+  assert.strictEqual(E.srvLerEstado_(), null);
+}
+
+// 8. importação: lerCopia (cliente) aceita a cópia exportada e recusa arquivo inválido
+{
+  const ini = cli.indexOf('const TIPOS_EV'), fim = cli.indexOf('function exportar(');
+  assert.ok(ini >= 0 && fim > ini, 'lerCopia não encontrada no Index.html');
+  const lerCopia = new Function(cli.slice(ini, fim) + ';return lerCopia;')();
+  const dados = { ciclos: [{ desde: '2026-01-01', seq: ['dia', 'folga'] }], eventos: [{ id: 'a', tipo: 'banco', data: '2026-06-01', horas: 2 }] };
+  assert.ok(lerCopia(JSON.stringify({ app: 'escala-plantao', dados })));
+  assert.ok(lerCopia(JSON.stringify(dados)));
+  assert.strictEqual(lerCopia('não é json'), null);
+  assert.strictEqual(lerCopia(JSON.stringify({ ciclos: [], eventos: [] })), null);
+  assert.strictEqual(lerCopia(JSON.stringify(Object.assign({}, dados, { eventos: [{ id: 'b', tipo: 'x', data: '2026-06-01' }] }))), null);
+  assert.strictEqual(lerCopia(JSON.stringify(Object.assign({}, dados, { eventos: [{ id: 'b', tipo: 'banco', data: '01/06/2026' }] }))), null);
+}
+
+// 9. normalizar aceita lixo
 assert.ok(E.normalizar(null).feriados.length > 0);
 assert.ok(E.normalizar('x').ciclos.length === 0);
 

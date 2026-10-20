@@ -20,7 +20,8 @@ Cada pessoa abre o app com a própria conta Google (`executeAs: USER_ACCESSING`,
 - `Código.js`: servidor.
   - Bloco **`//#UTIL-START` … `//#ENGINE-END`**: utilitários e motor de regras (`baseDoDia`, `turnosDoDia`, `calcDRSO`, `choques`, `resumo`, `relatorioMes`, `banco`, `ledger`…). Trabalha sobre o estado global `S`.
   - Armazenamento: `PropertiesService.getUserProperties()`. A config fica em `cfg`, e os eventos em blocos `ev0`, `ev1`… de até 6000 caracteres cada. Usa `rev` para controle otimista de concorrência.
-  - API chamada pelo cliente: `api_carregar`, `api_salvar(estado, revBase)` e `api_sincronizar`. As funções internas terminam em `_`.
+  - API chamada pelo cliente: `api_carregar`, `api_salvar(estado, revBase)`, `api_sincronizar` e `api_apagarTudo` (apaga as propriedades, a agenda "Plantão" e o gatilho). As funções internas terminam em `_`.
+  - Backup: Ajustes > Seus dados exporta e importa um JSON `{app:'escala-plantao', dados}`, validado por `lerCopia` no cliente.
   - Agenda: `srvSincronizar_` compara o que existe com o que deveria existir pelas tags `k` (chave) e `sig` (assinatura). Faz no máximo 20 operações por rodada, com pausa de 500 ms entre elas.
 - `Index.html`: o front inteiro (CSS, HTML e JS num só arquivo, sem framework). Usa uma **cópia idêntica** do bloco UTIL/ENGINE, além das views (`viewHoje`, `viewMes`, `viewLancar`, `viewSaldos`, `viewAjustes`), dos formulários e de `gs()`, um wrapper com Promise sobre `google.script.run`.
 

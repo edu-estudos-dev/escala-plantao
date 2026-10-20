@@ -364,6 +364,23 @@ function api_salvar(estado, revBase) {
   }
 }
 
+/** Apaga tudo do usuário: configuração, lançamentos, a agenda "Plantão" e o gatilho diário. O app volta à configuração inicial. */
+function api_apagarTudo() {
+  const lock = LockService.getUserLock();
+  lock.waitLock(30000);
+  try {
+    const props = srvProps_();
+    const id = props.getProperty('cal');
+    const cal = id ? CalendarApp.getCalendarById(id) : null;
+    if (cal) cal.deleteCalendar();
+    srvRemoverGatilho_();
+    props.deleteAllProperties();
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /* ---------------- agenda do Google ---------------- */
 
 function srvAgenda_() {
@@ -429,6 +446,10 @@ function srvLimite_(e) {
 }
 
 function srvConfigurado_(estado) { return !!(estado && estado.ciclos && estado.ciclos.length); }
+
+function srvRemoverGatilho_() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'sincronizarDiario') ScriptApp.deleteTrigger(t); });
+}
 
 function srvGarantirGatilho_() {
   const ja = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'sincronizarDiario'; });
@@ -520,10 +541,7 @@ function sincronizarDiario() {
   const t0 = Date.now();
   try {
     // sem escala configurada (dados apagados) não há o que manter: remove o próprio gatilho em vez de falhar todo dia
-    if (!srvConfigurado_(srvLerEstado_())) {
-      ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'sincronizarDiario') ScriptApp.deleteTrigger(t); });
-      return;
-    }
+    if (!srvConfigurado_(srvLerEstado_())) { srvRemoverGatilho_(); return; }
     let r;
     do {
       const lock = LockService.getUserLock();
