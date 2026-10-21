@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=540">
 <title>Guia</title>
-<!-- Imagens de divulgação (540x960 CSS px, capturadas em 2x). /guia?n=1..8 na prévia (testes/previa.js). -->
+<!-- Imagens de divulgação (540x960 CSS px, capturadas em 2x). /guia?n=1..9 na prévia (testes/previa.js). -->
 <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0C0E11;--fg:#ECE8DF;--muted:#9AA0A8;--ouro:#E6B43C;--line:#2A2F37}
@@ -59,31 +59,35 @@ const app=(q)=>'<div class="fone"><div class="tela"><iframe src="/?print'+(q?'&'
 const g=(html)=>'<div class="fone"><div class="tela"><span class="ilus">Ilustração</span><div class="g">'+html+'</div></div></div>';
 const seta=(num,top,left)=>'<div class="seta" style="top:'+top+'px;left:'+left+'px"><b>'+num+'</b>'+SETA+'</div>';
 const T={
-1:topo('Primeiro acesso · 1 de 3')+
+1:topo('Primeiro acesso · 1 de 4')+
+ '<h1>Toque em <em>Revisar permissões</em></h1><p class="sub">O app precisa da sua autorização uma vez. Depois, escolha a sua conta Gmail.</p>'+
+ g('<p style="font-size:13px;color:#5f6368;margin:0 0 18px">Google Apps Script</p><h2>Escala de Plantão <span style="color:#d93025">(não verificado)</span></h2><p>Escala de Plantão precisa da sua permissão para acessar seus dados no Google.</p><div class="perm" style="border-bottom:1px solid #e3e3e3"><span style="flex:none;color:#f9ab00;font-size:18px;line-height:1">&#9888;</span><span>Ao revisar as permissões, avalie se você confia em Escala de Plantão.</span></div><div class="botoes" style="justify-content:flex-end;gap:14px"><span class="bt cl">Cancelar</span><span class="bt alvo" data-n="1" data-dir="cima">Revisar permissões</span></div>')
+,
+2:topo('Primeiro acesso · 2 de 4')+
  '<h1>Aparece um aviso do Google? <em>É normal.</em></h1><p class="sub">Todo app novo que usa a Agenda mostra isso até passar pela revisão do Google. Toque em <b>Avançado</b>.</p>'+
- g('<div class="conta"><i></i>voce@gmail.com</div>'+ALERTA+'<h2>O Google não verificou este app</h2><p>O app está pedindo acesso a informações da sua Conta do Google. Ele ainda não foi verificado pelo Google.</p><p>Continue apenas se você confia no desenvolvedor.</p><div class="botoes"><span class="azul alvo" data-n="1">Avançado</span><span class="bt">Voltar para a segurança</span></div>')
+ g('<div class="conta"><i></i>voce@gmail.com</div>'+ALERTA+'<h2>O Google não verificou este app</h2><p>O app está pedindo acesso a informações da sua Conta do Google. Ele ainda não foi verificado pelo Google.</p><p>Continue apenas se você confia no desenvolvedor.</p><div class="botoes"><span class="azul alvo" data-n="2">Avançado</span><span class="bt">Voltar para a segurança</span></div>')
 ,
-2:topo('Primeiro acesso · 2 de 3')+
+3:topo('Primeiro acesso · 3 de 4')+
  '<h1>Toque em <em>Acessar Escala de Plantão</em></h1><p class="sub">“Não seguro” quer dizer só que o Google ainda não revisou o app. Seus dados ficam na sua conta.</p>'+
- g('<div class="conta"><i></i>voce@gmail.com</div>'+ALERTA+'<h2>O Google não verificou este app</h2><p>O app está pedindo acesso a informações da sua Conta do Google. Ele ainda não foi verificado pelo Google.</p><p class="azul" style="margin-top:4px">Ocultar avançado</p><p>Continue apenas se você entende os riscos e confia no desenvolvedor.</p><p><span class="azul alvo" data-n="2">Acessar Escala de Plantão (não seguro)</span></p>')
+ g('<div class="conta"><i></i>voce@gmail.com</div>'+ALERTA+'<h2>O Google não verificou este app</h2><p>O app está pedindo acesso a informações da sua Conta do Google. Ele ainda não foi verificado pelo Google.</p><p class="azul" style="margin-top:4px">Ocultar avançado</p><p>Continue apenas se você entende os riscos e confia no desenvolvedor.</p><p><span class="azul alvo" data-n="3">Acessar Escala de Plantão (não seguro)</span></p>')
 ,
-3:topo('Primeiro acesso · 3 de 3')+
+4:topo('Primeiro acesso · 4 de 4')+
  '<h1>Marque as permissões e toque em <em>Continuar</em></h1><p class="sub">A Agenda serve para criar a agenda <b>Plantão</b> com seus serviços e avisos.</p>'+
- g('<div class="conta"><i></i>voce@gmail.com</div><h2 style="font-size:20px">Escala de Plantão quer acessar sua Conta do Google</h2><div class="sel alvo" data-n="3" data-dir="dir"><span class="chk"></span>Selecionar tudo</div><div class="perm"><span class="chk"></span><span>Ver, editar, compartilhar e excluir as agendas que você pode acessar</span></div><div class="perm"><span class="chk"></span><span>Permitir que o app seja executado quando você não estiver presente (atualiza a agenda de madrugada)</span></div><div class="botoes"><span class="bt cl">Cancelar</span><span class="bt alvo" data-n="4" data-dir="cima">Continuar</span></div>')
+ g('<div class="conta"><i></i>voce@gmail.com</div><h2 style="font-size:20px">Escala de Plantão quer acessar sua Conta do Google</h2><div class="sel alvo" data-n="4" data-dir="dir"><span class="chk"></span>Selecionar tudo</div><div class="perm"><span class="chk"></span><span>Ver, editar, compartilhar e excluir as agendas que você pode acessar</span></div><div class="perm"><span class="chk"></span><span>Ver o endereço de e-mail principal da sua Conta do Google (reserva a sua vaga no teste)</span></div><div class="perm"><span class="chk"></span><span>Permitir que o app seja executado quando você não estiver presente (atualiza a agenda de madrugada)</span></div><div class="botoes"><span class="bt cl">Cancelar</span><span class="bt alvo" data-n="5" data-dir="cima">Continuar</span></div>')
 ,
-4:topo('Configuração inicial')+
+5:topo('Configuração inicial')+
  '<h1>Informe seu <em>próximo serviço</em></h1><p class="sub">Dia ou noite, a data e o valor da sua hora de DRSO (depende da graduação). O app monta a escala e a agenda.</p>'+app('vazio'),
-5:topo('Hoje')+
+6:topo('Hoje')+
  '<h1>Próximo serviço, folga e os <em>próximos 14 dias</em></h1><p class="sub">Tudo de relance, com o tempo até o próximo plantão.</p>'+app(''),
-6:topo('Lançar')+
+7:topo('Lançar')+
  '<h1>DRSO, permuta, folga, férias e <em>banco de horas</em></h1><p class="sub">A DRSO já sai calculada, com +30% em fim de semana, feriado e madrugada.</p>'+app('aba=lancar'),
-7:topo('Mês')+
+8:topo('Mês')+
  '<h1>O mês inteiro, com <em>resumo e fechamento</em></h1><p class="sub">Serviços, horas, DRSO, permutas e quanto falta receber.</p>'+app('aba=mes'),
-8:topo('Saldos')+
+9:topo('Saldos')+
  '<h1>Quem te deve serviço e <em>o que falta receber</em></h1><p class="sub">Permutas em aberto, DRSO a receber, banco de horas e a agenda do Google.</p>'+app('aba=saldos'),
 };
 const c=document.getElementById('c');
-c.innerHTML=T[n]+(n<=3?'<p class="nota">Ilustração: a tela real do Google pode variar um pouco.</p>':'');
+c.innerHTML=T[n]+(n<=4?'<p class="nota">Ilustração: a tela real do Google pode variar um pouco.</p>':'');
 // setas apontando para cada .alvo: pela esquerda, ou de baixo para cima quando não há espaço à esquerda
 document.fonts.ready.then(()=>{const base=c.getBoundingClientRect();c.querySelectorAll('.alvo').forEach(a=>{const r=a.getBoundingClientRect(),d=document.createElement('div');d.innerHTML='<b>'+a.dataset.n+'</b>'+SETA;
   const dir=a.dataset.dir||(r.left-base.left>150?'esq':'cima');

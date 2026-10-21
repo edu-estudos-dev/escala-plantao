@@ -30,7 +30,7 @@ if(q.has('print'))document.write('<style>::-webkit-scrollbar{display:none}html{s
 </script>`;
 
 http.createServer((req, res) => {
-  // páginas auxiliares: /fontes (comparação de fontes) e /guia?n=1..8 (imagens de divulgação)
+  // páginas auxiliares: /fontes (comparação de fontes) e /guia?n=1..9 (imagens de divulgação)
   const aux = { '/fontes': 'fontes.html', '/guia': 'guia.html' }[req.url.split('?')[0]];
   if (aux) {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
