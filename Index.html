@@ -149,12 +149,16 @@ button.lin:hover{background:var(--surface)}
 .num b{font:800 28px/1.05 var(--f-disp);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .num span{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.3}
 .acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.acoes.par{display:grid;grid-template-columns:1fr 1fr}
+.zona-perigo{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.zona-perigo>.btn{width:100%}
 
 /* botões */
-.btn{background:var(--ink);color:var(--on-ink);border:1px solid var(--ink);border-radius:var(--r);padding:10px 16px;min-height:46px;font-weight:700;letter-spacing:.01em}
+.btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;background:var(--ink);color:var(--on-ink);border:1px solid var(--ink);border-radius:var(--r);padding:10px 16px;min-height:46px;font-weight:700;letter-spacing:.01em}
 .btn.sec{background:transparent;color:var(--fg);border-color:var(--rule)}
 .btn.mini{min-height:38px;padding:6px 12px;font-size:14px;font-weight:600}
 .btn.perigo{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.perigo-txt{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 45%,transparent)}
 .btn[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:var(--on-extra)}
 
 /* seletor segmentado (tipo de lançamento, sub-tipo da permuta) */
@@ -861,10 +865,9 @@ function viewAjustes(){
   '<label class="fld"><span>A posição 1 cai em</span><input type="date" id="c-desde" value="'+esc(ui.draft.desde)+'"></label><div id="previa" style="margin-top:12px">'+previaCiclo(ui.draft.seq,ui.draft.desde)+'</div><p class="dica">Valem a partir da data escolhida. O passado continua como estava.</p><button class="btn" style="margin-top:12px;width:100%" data-act="salvar-ciclo">Salvar novo ciclo</button></div>'+
   '<h2 class="sec">Ciclos registrados</h2><div class="lista">'+S.ciclos.slice().sort((a,b)=>a.desde<b.desde?-1:1).map(c=>'<div class="lin"><span class="d" style="min-width:0">'+fmtBR(c.desde)+'</span><span class="mono muted" style="font-size:12px">'+c.seq.map(x=>x[0].toUpperCase()).join(' ')+'</span>'+(S.ciclos.length>1?'<button class="btn mini sec" style="margin-left:auto" data-act="del-ciclo" data-arg="'+c.desde+'">Remover</button>':'')+'</div>').join('')+'</div>'+
   '<h2 class="sec">Seus dados</h2><div class="card"><p class="muted">Salvos na sua conta Google, dentro deste aplicativo. Só você tem acesso aos seus lançamentos. Exporte uma cópia de vez em quando: o arquivo restaura tudo se algo der errado ou se você trocar de conta.</p>'+
-  '<div class="acoes"><button class="btn mini sec" data-act="exportar">Exportar cópia</button><label class="btn mini sec" style="cursor:pointer">Importar cópia<input type="file" id="imp" accept=".json,application/json" hidden></label></div>'+
-  (ui.imp?'<p class="dica">O arquivo tem '+ui.imp.ciclos.length+' ciclo(s) e '+ui.imp.eventos.length+' lançamento(s). Importar <b>substitui tudo</b> o que está no app.</p><div class="acoes"><button class="btn mini perigo" data-act="imp-ok">Confirmar importação</button><button class="btn mini sec" data-act="imp-cancelar">Cancelar</button></div>':'')+
-  '<div class="acoes" style="margin-top:12px">'+(ui.confirmApagar?'<button class="btn mini perigo" data-act="apagar-tudo">Confirmar: apagar tudo</button><button class="btn mini sec" data-act="apagar-cancelar">Cancelar</button>':'<button class="btn mini sec" data-act="apagar-tudo">Apagar todos os dados</button>')+'</div>'+
-  (ui.confirmApagar?'<p class="dica">Apaga a escala, todos os lançamentos e a agenda <b>Plantão</b> do Google Agenda. Não dá para desfazer, a não ser importando uma cópia.</p>':'')+'</div>';
+  '<div class="acoes par"><button class="btn sec" data-act="exportar">Exportar cópia</button><label class="btn sec" style="cursor:pointer">Importar cópia<input type="file" id="imp" accept=".json,application/json" hidden></label></div>'+
+  (ui.imp?'<p class="dica">O arquivo tem '+ui.imp.ciclos.length+' ciclo(s) e '+ui.imp.eventos.length+' lançamento(s). Importar <b>substitui tudo</b> o que está no app.</p><div class="acoes par"><button class="btn perigo" data-act="imp-ok">Substituir tudo</button><button class="btn sec" data-act="imp-cancelar">Cancelar</button></div>':'')+
+  '<div class="zona-perigo">'+(ui.confirmApagar?'<p class="dica" style="margin:0 0 10px">Apaga a escala, todos os lançamentos e a agenda <b>Plantão</b> do Google Agenda. Não dá para desfazer, a não ser importando uma cópia.</p><div class="acoes par" style="margin-top:0"><button class="btn perigo" data-act="apagar-tudo">Apagar tudo</button><button class="btn sec" data-act="apagar-cancelar">Cancelar</button></div>':'<button class="btn sec perigo-txt" data-act="apagar-tudo">Apagar todos os dados</button>')+'</div></div>';
 }
 const VIEWS={hoje:viewHoje,mes:viewMes,lancar:viewLancar,saldos:viewSaldos,ajustes:viewAjustes};
 const ABAS=[['hoje','Hoje','<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'],['mes','Mês','<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'],['lancar','Lançar','<path d="M12 5v14M5 12h14"/>'],['saldos','Saldos','<path d="M4 19h16M7 16V9M12 16V5M17 16v-4"/>'],['ajustes','Ajustes','<path d="M4 7h10M18 7h2M4 17h2M10 17h10M16 5v4M8 15v4"/>']];
