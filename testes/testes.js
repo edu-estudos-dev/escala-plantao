@@ -15,7 +15,7 @@ assert.strictEqual(bloco(srv), bloco(cli), 'bloco UTIL/ENGINE diferente entre C�
 
 // carrega Código.js com PropertiesService e Utilities falsos, numa data fixa
 function carregar(ano) {
-  const agendaApagada = [], props = {}, gatilhos = [{ getHandlerFunction: () => 'sincronizarDiario' }];
+  const agendaApagada = [], props = {}, sprops = {}, quem = { email: 'eu@x.com' }, gatilhos = [{ getHandlerFunction: () => 'sincronizarDiario' }];
   const RealDate = Date;
   class D extends RealDate { constructor(...a) { a.length ? super(...a) : super(ano, 5, 1); } }
   D.UTC = RealDate.UTC; D.now = () => new D().getTime();
@@ -28,15 +28,19 @@ function carregar(ano) {
       setProperty: (k, v) => { props[k] = v; },
       deleteProperty: k => { delete props[k]; },
       deleteAllProperties: () => { Object.keys(props).forEach(k => delete props[k]); },
+    }), getScriptProperties: () => ({
+      getProperty: k => (k in sprops ? sprops[k] : null),
+      setProperty: (k, v) => { sprops[k] = v; },
     }) },
+    Session: { getActiveUser: () => ({ getEmail: () => quem.email }) },
     Utilities: { newBlob: s => ({ getBytes: () => Buffer.from(s, 'utf8') }) },
-    LockService: { getUserLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    LockService: { getUserLock: () => ({ waitLock() {}, releaseLock() {} }), getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     CalendarApp: { getCalendarById: id => (id === 'cal1' ? { deleteCalendar: () => { agendaApagada.push(id); } } : null) },
     ScriptApp: { getProjectTriggers: () => gatilhos.slice(), deleteTrigger: g => gatilhos.splice(gatilhos.indexOf(g), 1) },
   };
   vm.createContext(ctx);
-  vm.runInContext(srv + ';this.E={pascoa,feriadosDoAno,PADRAO,normalizar,srvLerEstado_,srvGravarEstado_,api_salvar,api_apagarTudo,sincronizarDiario,TITULO_APP,calcDRSO,mkTurno,setS:x=>{S=x}};', ctx);
-  return { E: ctx.E, props, gatilhos, agendaApagada };
+  vm.runInContext(srv + ';this.E={pascoa,feriadosDoAno,PADRAO,normalizar,srvLerEstado_,srvGravarEstado_,api_salvar,api_apagarTudo,sincronizarDiario,srvAcesso_,TITULO_APP,calcDRSO,mkTurno,setS:x=>{S=x}};', ctx);
+  return { E: ctx.E, props, sprops, quem, gatilhos, agendaApagada };
 }
 
 // 2. feriados: Páscoa e regra igual à lista fixa antiga de 2026–2027
@@ -133,5 +137,18 @@ assert.ok(cli.includes("addEventListener('beforeunload'"), "aviso ao fechar com 
 // 11. normalizar aceita lixo
 assert.ok(E.normalizar(null).feriados.length > 0);
 assert.ok(E.normalizar('x').ciclos.length === 0);
+
+
+// 11. teste fechado: só os primeiros VAGAS e-mails entram; quem já entrou continua; "livres" não ocupa vaga
+{
+  const { E, sprops, quem } = carregar(2026);
+  for (let i = 1; i <= 10; i++) { quem.email = 'p' + i + '@x.com'; assert.ok(E.srvAcesso_()); }
+  quem.email = 'p11@x.com'; assert.ok(!E.srvAcesso_());
+  quem.email = 'P3@x.com'; assert.ok(E.srvAcesso_());
+  sprops.livres = 'dono@x.com'; quem.email = 'dono@x.com'; assert.ok(E.srvAcesso_());
+  assert.strictEqual(sprops.acessos.split(', ').length, 10);
+  sprops.acessos = sprops.acessos.replace('p5@x.com, ', ''); quem.email = 'p11@x.com'; assert.ok(E.srvAcesso_());
+  quem.email = ''; assert.ok(!E.srvAcesso_());
+}
 
 console.log('ok');

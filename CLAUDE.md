@@ -32,6 +32,7 @@ Cada pessoa abre o app com a própria conta Google (`executeAs: USER_ACCESSING`,
 - `testes/testes.js`: confere se o motor está igual nos dois arquivos e testa feriados, cálculo de DRSO, armazenamento em blocos e os títulos de evento. Rode `node testes/testes.js` antes de qualquer `clasp push`. O `.claspignore` mantém a pasta fora do Apps Script.
 - Feriados: `feriadosDoAno(ano)` gera as datas fixas mais a Sexta-feira Santa. `ferAnos` guarda os anos que já foram adicionados aos dados do usuário, para não trazer de volta um feriado que ele removeu.
 - Armazenamento: `cfg.nev` diz quantos blocos `evN` valem. Ao ler, blocos acima disso são ignorados. Há um limite de espaço em `LIMITE_BYTES`, abaixo dos ~500 KB que o Google permite.
+- Teste fechado: `srvAcesso_` (chamado em `doGet` e `api_carregar`) libera só os primeiros `VAGAS` e-mails (`Session.getActiveUser`, escopo `userinfo.email`). Eles ficam na propriedade do script `acessos`; e-mails em `livres` entram sem ocupar vaga. As duas se editam no editor, em Configurações do projeto > Propriedades do script. Apagar um e-mail de `acessos` libera a vaga.
 - `TITULO_APP` precisa acompanhar os títulos gerados em `srvEspec_`, porque é por ele que a sincronização reconhece eventos do app que ficaram sem marca.
 
 ## Regras do projeto

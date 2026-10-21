@@ -10,6 +10,7 @@ const TAM_BLOCO = 6000;          // limite de caracteres por propriedade (o Goog
 const MAX_EVENTOS = 2500;
 const LIMITE_BYTES = 450000;     // margem abaixo do limite de ~500 KB das propriedades do usuário
 const LOTE_OPS = 20;             // máximo de criações/alterações/exclusões por rodada (o Google limita o ritmo)
+const VAGAS = 10;               // teste fechado: só os primeiros e-mails que abrirem o app entram
 const PAUSA_OP_MS = 500;         // pausa entre operações na agenda, para não estourar o limite de ritmo
 
 //#UTIL-START
@@ -271,9 +272,45 @@ function ledger(){
 //#ENGINE-END
 
 function doGet() {
+  if (!srvAcesso_()) {
+    return HtmlService.createHtmlOutput(PAG_SEM_VAGA)
+      .setTitle('Escala de Plantão')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('Escala de Plantão')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
+}
+
+/* ---------------- acesso (teste fechado) ---------------- */
+
+const PAG_SEM_VAGA = '<body style="margin:0;background:#0C0E11;color:#ECE8DF;font:16px/1.5 system-ui,sans-serif;padding:32px 20px">' +
+  '<h1 style="font-size:24px;margin:0 0 10px">Vagas do teste preenchidas</h1>' +
+  '<p style="color:#9AA0A8;margin:0">O teste da Escala de Plantão está limitado aos primeiros ' + VAGAS + ' colegas, e as vagas já foram ocupadas. ' +
+  'Fale com quem te mandou o link para entrar na lista de espera.</p></body>';
+
+/**
+ * Libera os primeiros VAGAS e-mails que abrirem o app. Eles ficam em "acessos" nas propriedades do script
+ * (editor > Configurações do projeto); apagar um e-mail de lá libera a vaga. E-mails em "livres" entram sem ocupar vaga.
+ */
+function srvAcesso_() {
+  const email = String(Session.getActiveUser().getEmail() || '').toLowerCase();
+  if (!email) return false;
+  const sp = PropertiesService.getScriptProperties();
+  const lista = function (k) { return String(sp.getProperty(k) || '').toLowerCase().split(/[\s,;]+/).filter(String); };
+  if (lista('livres').indexOf(email) >= 0 || lista('acessos').indexOf(email) >= 0) return true;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const acessos = lista('acessos'); // relida dentro da trava: dois colegas abrindo juntos não pegam a mesma vaga
+    if (acessos.indexOf(email) >= 0) return true;
+    if (acessos.length >= VAGAS) return false;
+    acessos.push(email);
+    sp.setProperty('acessos', acessos.join(', '));
+    return true;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 /* ---------------- armazenamento ---------------- */
@@ -326,6 +363,7 @@ function srvGravarEstado_(novo, rev) {
 }
 
 function api_carregar() {
+  if (!srvAcesso_()) throw new Error('Acesso restrito: as vagas do teste estão preenchidas.');
   const estado = srvLerEstado_();
   const s = srvProps_().getProperty('sync');
   return { estado: estado, sync: s ? JSON.parse(s) : null };
