@@ -32,14 +32,14 @@ function carregar(ano) {
       getProperty: k => (k in sprops ? sprops[k] : null),
       setProperty: (k, v) => { sprops[k] = v; },
     }) },
-    Session: { getActiveUser: () => ({ getEmail: () => quem.email }) },
-    Utilities: { newBlob: s => ({ getBytes: () => Buffer.from(s, 'utf8') }) },
+    Session: { getActiveUser: () => ({ getEmail: () => quem.email }), getScriptTimeZone: () => 'America/Fortaleza' },
+    Utilities: { newBlob: s => ({ getBytes: () => Buffer.from(s, 'utf8') }), formatDate: () => '01/06 10:00' },
     LockService: { getUserLock: () => ({ waitLock() {}, releaseLock() {} }), getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     CalendarApp: { getCalendarById: id => (id === 'cal1' ? { deleteCalendar: () => { agendaApagada.push(id); } } : null) },
     ScriptApp: { getProjectTriggers: () => gatilhos.slice(), deleteTrigger: g => gatilhos.splice(gatilhos.indexOf(g), 1) },
   };
   vm.createContext(ctx);
-  vm.runInContext(srv + ';this.E={pascoa,feriadosDoAno,PADRAO,normalizar,srvLerEstado_,srvGravarEstado_,api_salvar,api_apagarTudo,sincronizarDiario,srvAcesso_,TITULO_APP,calcDRSO,mkTurno,setS:x=>{S=x}};', ctx);
+  vm.runInContext(srv + ';this.E={pascoa,feriadosDoAno,PADRAO,normalizar,srvLerEstado_,srvGravarEstado_,api_salvar,api_apagarTudo,sincronizarDiario,srvAcesso_,api_carregar,TITULO_APP,calcDRSO,mkTurno,setS:x=>{S=x}};', ctx);
   return { E: ctx.E, props, sprops, quem, gatilhos, agendaApagada };
 }
 
@@ -149,6 +149,16 @@ assert.ok(E.normalizar('x').ciclos.length === 0);
   assert.strictEqual(sprops.acessos.split(', ').length, 10);
   sprops.acessos = sprops.acessos.replace('p5@x.com, ', ''); quem.email = 'p11@x.com'; assert.ok(E.srvAcesso_());
   quem.email = ''; assert.ok(!E.srvAcesso_());
+}
+
+// 12. registro de uso: conta aberturas e lançamentos, sem guardar conteúdo
+{
+  const { E, sprops, quem } = carregar(2026);
+  quem.email = 'p1@x.com';
+  E.api_carregar(); E.api_carregar();
+  assert.strictEqual(sprops['uso:p1@x.com'], 'último 01/06 10:00 · 2 aberturas · 0 lançamentos · sem escala');
+  E.api_salvar(Object.assign(E.PADRAO(), { ciclos: [{ desde: '2026-01-01', seq: ['dia'] }], eventos: [{ id: 'a', tipo: 'banco', data: '2026-06-01', horas: 2 }] }), 0);
+  assert.strictEqual(sprops['uso:p1@x.com'], 'último 01/06 10:00 · 2 aberturas · 1 lançamento · escala ok');
 }
 
 console.log('ok');

@@ -293,8 +293,10 @@ const PAG_SEM_VAGA = '<body style="margin:0;background:#0C0E11;color:#ECE8DF;fon
  * Libera os primeiros VAGAS e-mails que abrirem o app. Eles ficam em "acessos" nas propriedades do script
  * (editor > Configurações do projeto); apagar um e-mail de lá libera a vaga. E-mails em "livres" entram sem ocupar vaga.
  */
+function srvEmail_() { return String(Session.getActiveUser().getEmail() || '').toLowerCase(); }
+
 function srvAcesso_() {
-  const email = String(Session.getActiveUser().getEmail() || '').toLowerCase();
+  const email = srvEmail_();
   if (!email) return false;
   const sp = PropertiesService.getScriptProperties();
   const lista = function (k) { return String(sp.getProperty(k) || '').toLowerCase().split(/[\s,;]+/).filter(String); };
@@ -311,6 +313,23 @@ function srvAcesso_() {
   } finally {
     lock.releaseLock();
   }
+}
+
+/**
+ * Registro de uso do teste, na propriedade do script "uso:<e-mail>": último acesso, aberturas e quantos lançamentos.
+ * Nunca o conteúdo. Falha aqui não pode atrapalhar o app.
+ */
+function srvRegistrarUso_(estado, abriu) {
+  try {
+    const email = srvEmail_();
+    if (!email) return;
+    const sp = PropertiesService.getScriptProperties(), k = 'uso:' + email;
+    const ab = (Number((String(sp.getProperty(k) || '').match(/(\d+) abertura/) || [])[1]) || 0) + (abriu ? 1 : 0);
+    const nl = estado && estado.eventos ? estado.eventos.length : 0;
+    sp.setProperty(k, 'último ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM HH:mm') +
+      ' · ' + ab + (ab === 1 ? ' abertura' : ' aberturas') + ' · ' + nl + (nl === 1 ? ' lançamento' : ' lançamentos') +
+      ' · ' + (srvConfigurado_(estado) ? 'escala ok' : 'sem escala'));
+  } catch (e) {}
 }
 
 /* ---------------- armazenamento ---------------- */
@@ -365,6 +384,7 @@ function srvGravarEstado_(novo, rev) {
 function api_carregar() {
   if (!srvAcesso_()) throw new Error('Acesso restrito: as vagas do teste estão preenchidas.');
   const estado = srvLerEstado_();
+  srvRegistrarUso_(estado, true);
   const s = srvProps_().getProperty('sync');
   return { estado: estado, sync: s ? JSON.parse(s) : null };
 }
@@ -396,6 +416,7 @@ function api_salvar(estado, revBase) {
     const rev = revAtual + 1;
     const limite = srvGravarEstado_(novo, rev);
     if (limite) return { limite: true, msg: limite, estado: atual };
+    srvRegistrarUso_(novo, false);
     return { ok: true, rev: rev };
   } finally {
     lock.releaseLock();
