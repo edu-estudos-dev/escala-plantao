@@ -51,7 +51,7 @@ function normFeriados(o,d){
   else if(!Array.isArray((d||{}).ferAnos))o.ferAnos=[2026,2027]; // dados anteriores ao ferAnos já vinham com os feriados de 2026 e 2027
   return semearFeriados(o);
 }
-const PADRAO=()=>semearFeriados({v:1,horarios:{dia:['05:00','17:00'],noite:['17:00','05:00']},ciclos:[],alertas:{dia:[600,120],noite:[1440,180]},valorHora:null,feriados:[],ferAnos:[],feriadosSem:[],eventos:[],rev:0});
+const PADRAO=()=>semearFeriados({v:1,horarios:{dia:['06:00','18:00'],noite:['18:00','06:00']},ciclos:[],alertas:{dia:[600,120],noite:[1440,180]},valorHora:null,feriados:[],ferAnos:[],feriadosSem:[],eventos:[],rev:0});
 let S=PADRAO();
 /** Completa e corrige o estado salvo (d), igual no servidor e no cliente. */
 function normalizar(d){

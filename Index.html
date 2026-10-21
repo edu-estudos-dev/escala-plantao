@@ -310,7 +310,7 @@ function normFeriados(o,d){
   else if(!Array.isArray((d||{}).ferAnos))o.ferAnos=[2026,2027]; // dados anteriores ao ferAnos já vinham com os feriados de 2026 e 2027
   return semearFeriados(o);
 }
-const PADRAO=()=>semearFeriados({v:1,horarios:{dia:['05:00','17:00'],noite:['17:00','05:00']},ciclos:[],alertas:{dia:[600,120],noite:[1440,180]},valorHora:null,feriados:[],ferAnos:[],feriadosSem:[],eventos:[],rev:0});
+const PADRAO=()=>semearFeriados({v:1,horarios:{dia:['06:00','18:00'],noite:['18:00','06:00']},ciclos:[],alertas:{dia:[600,120],noite:[1440,180]},valorHora:null,feriados:[],ferAnos:[],feriadosSem:[],eventos:[],rev:0});
 let S=PADRAO();
 /** Completa e corrige o estado salvo (d), igual no servidor e no cliente. */
 function normalizar(d){
@@ -611,8 +611,8 @@ function viewWizard(){
   return '<h1 class="tit">Sua escala</h1><p class="muted">Escala 12x24 e 12x48: serviço de dia, serviço de noite e duas folgas, repetindo a cada 4 dias.</p>'+
   '<div class="card" id="wz" style="margin-top:12px"><label class="fld" style="margin-top:0"><span>Seu próximo serviço é de</span><select data-w="tipo"><option value="dia">Dia</option><option value="noite">Noite</option></select></label>'+
   '<label class="fld"><span>Em que data</span><input type="date" data-w="data" value="'+h+'"></label>'+
-  '<div class="duo"><label class="fld"><span>Dia · início</span>'+tin('di','05:00')+'</label><label class="fld"><span>Dia · fim</span>'+tin('df','17:00')+'</label></div>'+
-  '<div class="duo"><label class="fld"><span>Noite · início</span>'+tin('ni','17:00')+'</label><label class="fld"><span>Noite · fim</span>'+tin('nf','05:00')+'</label></div>'+
+  '<div class="duo"><label class="fld"><span>Dia · início</span>'+tin('di','06:00')+'</label><label class="fld"><span>Dia · fim</span>'+tin('df','18:00')+'</label></div>'+
+  '<div class="duo"><label class="fld"><span>Noite · início</span>'+tin('ni','18:00')+'</label><label class="fld"><span>Noite · fim</span>'+tin('nf','06:00')+'</label></div>'+
   '<label class="fld"><span>Valor da hora de DRSO (R$) · depende da graduação</span><input type="text" inputmode="decimal" data-w="vh" placeholder="pode preencher depois"></label>'+
   '<p class="dica">O app cria uma agenda chamada <b>Plantão</b> no seu Google Agenda, com avisos antes de cada serviço. Os avisos podem ser ajustados depois, em Ajustes.</p>'+
   '<button class="btn" style="margin-top:16px;width:100%" data-act="wz-ok">Criar minha escala e agenda</button></div>';

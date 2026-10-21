@@ -6,7 +6,7 @@ const PORTA = 5173;
 
 const STUB = `<script>
 (function(){
-const estado={v:1,horarios:{dia:['05:00','17:00'],noite:['17:00','05:00']},alertas:{dia:[600,120],noite:[1440,180]},valorHora:40.5,
+const estado={v:1,horarios:{dia:['06:00','18:00'],noite:['18:00','06:00']},alertas:{dia:[600,120],noite:[1440,180]},valorHora:40.5,
  ciclos:[{desde:'2026-10-20',seq:['dia','noite','folga','folga']}],feriadosSem:[],rev:3,
  eventos:[
   {id:'a1',tipo:'extra',data:'2026-10-22',turno:'custom',ini:'18:00',fim:'02:00',dur:8,destino:'pagamento',pago:false,valor:348.3,maj:2,fer:'',obs:''},
