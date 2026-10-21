@@ -147,6 +147,7 @@ button.lin:hover{background:var(--surface)}
 
 /* números do resumo: placar */
 .resumo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border-radius:var(--r);overflow:hidden;box-shadow:0 0 0 1px var(--line)}
+.priv p{margin:0 0 10px;line-height:1.5}.priv p:last-child{margin:0}.priv a{color:var(--ouro);word-break:break-all}
 .num{background:var(--surface);padding:12px;display:flex;flex-direction:column}
 .num b{font:800 28px/1.05 var(--f-disp);letter-spacing:-.02em}
 .num span{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.3}
@@ -614,7 +615,7 @@ function viewWizard(){
   '<div class="duo"><label class="fld"><span>Dia · início</span>'+tin('di','06:00')+'</label><label class="fld"><span>Dia · fim</span>'+tin('df','18:00')+'</label></div>'+
   '<div class="duo"><label class="fld"><span>Noite · início</span>'+tin('ni','18:00')+'</label><label class="fld"><span>Noite · fim</span>'+tin('nf','06:00')+'</label></div>'+
   '<label class="fld"><span>Valor da hora de DRSO (R$) · depende da graduação</span><input type="text" inputmode="decimal" data-w="vh" placeholder="pode preencher depois"></label>'+
-  '<p class="dica">O app cria uma agenda chamada <b>Plantão</b> no seu Google Agenda, com avisos antes de cada serviço. Os avisos podem ser ajustados depois, em Ajustes.</p>'+
+  '<p class="dica">O app cria uma agenda chamada <b>Plantão</b> no seu Google Agenda, com avisos antes de cada serviço, e só mexe nela: suas outras agendas ele não vê. Seus dados ficam na sua conta Google. Detalhes em Ajustes &gt; Privacidade.</p>'+
   '<button class="btn" style="margin-top:16px;width:100%" data-act="wz-ok">Criar minha escala e agenda</button></div>';
 }
 function viewHoje(){
@@ -866,6 +867,13 @@ function viewAjustes(){
   '<h2 class="sec">Ciclo da escala</h2><div class="card"><p>Toque em cada posição para alternar entre dia, noite e folga. Cada posição é um dia do calendário.</p><div class="seq">'+ui.draft.seq.map(seqChip).join('')+'</div><div class="acoes"><button class="btn mini sec" data-act="seq+">+ posição</button><button class="btn mini sec" data-act="seq-">− posição</button></div>'+
   '<label class="fld"><span>A posição 1 cai em</span><input type="date" id="c-desde" value="'+esc(ui.draft.desde)+'"></label><div id="previa" style="margin-top:12px">'+previaCiclo(ui.draft.seq,ui.draft.desde)+'</div><p class="dica">Valem a partir da data escolhida. O passado continua como estava.</p><button class="btn" style="margin-top:12px;width:100%" data-act="salvar-ciclo">Salvar novo ciclo</button></div>'+
   '<h2 class="sec">Ciclos registrados</h2><div class="lista">'+S.ciclos.slice().sort((a,b)=>a.desde<b.desde?-1:1).map(c=>'<div class="lin"><span class="d" style="min-width:0">'+fmtBR(c.desde)+'</span><span class="mono muted" style="font-size:12px">'+c.seq.map(x=>x[0].toUpperCase()).join(' ')+'</span>'+(S.ciclos.length>1?'<button class="btn mini sec" style="margin-left:auto" data-act="del-ciclo" data-arg="'+c.desde+'">Remover</button>':'')+'</div>').join('')+'</div>'+
+  '<h2 class="sec">Privacidade</h2><div class="card priv">'+
+  '<p><b>Onde ficam seus dados.</b> A escala, os lançamentos e os ajustes ficam guardados na sua conta Google, no espaço deste app. O app não envia seus lançamentos para ninguém.</p>'+
+  '<p><b>Google Agenda.</b> O app cria a agenda <b>Plantão</b> e só tem acesso a ela. Suas outras agendas ele não vê nem altera.</p>'+
+  '<p><b>O que o autor do app vê.</b> Durante o teste: seu e-mail (para reservar a vaga), a data do último acesso, quantas vezes você abriu o app e quantos lançamentos tem. Nunca o conteúdo: datas, valores e nomes ficam só com você.</p>'+
+  '<p><b>Atualização de madrugada.</b> Às 3h o app atualiza a agenda Plantão com os próximos 60 dias, mesmo com o celular desligado. É para isso a permissão de executar quando você não está presente.</p>'+
+  '<p><b>Para sair.</b> "Apagar tudo", logo abaixo, remove seus dados e a agenda Plantão. Depois, em <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>, você tira o acesso do app.</p>'+
+  '<p class="muted">O código do app é aberto: <a href="https://github.com/edu-estudos-dev/escala-plantao" target="_blank" rel="noopener">github.com/edu-estudos-dev/escala-plantao</a>.</p></div>'+
   '<h2 class="sec">Seus dados</h2><div class="card"><p class="muted">Salvos na sua conta Google, dentro deste aplicativo. Só você tem acesso aos seus lançamentos. Exporte uma cópia de vez em quando: o arquivo restaura tudo se algo der errado ou se você trocar de conta.</p>'+
   '<div class="acoes par"><button class="btn sec" data-act="exportar">Exportar cópia</button><label class="btn sec" style="cursor:pointer">Importar cópia<input type="file" id="imp" accept=".json,application/json" hidden></label></div>'+
   (ui.imp?'<p class="dica">O arquivo tem '+ui.imp.ciclos.length+' ciclo(s) e '+ui.imp.eventos.length+' lançamento(s). Importar <b>substitui tudo</b> o que está no app.</p><div class="acoes par"><button class="btn perigo" data-act="imp-ok">Substituir tudo</button><button class="btn sec" data-act="imp-cancelar">Cancelar</button></div>':'')+

@@ -16,13 +16,13 @@ Cada pessoa abre o app com a própria conta Google (`executeAs: USER_ACCESSING`,
 
 ## Organização do código
 
-- `appsscript.json`: manifesto (fuso America/Fortaleza, V8, escopos de calendar e script.scriptapp, configuração do web app).
+- `appsscript.json`: manifesto (fuso America/Fortaleza, V8, serviço avançado Calendar v3, escopos `calendar.app.created`, `script.scriptapp` e `userinfo.email`, configuração do web app).
 - `Código.js`: servidor.
   - Bloco **`//#UTIL-START` … `//#ENGINE-END`**: utilitários e motor de regras (`baseDoDia`, `turnosDoDia`, `calcDRSO`, `choques`, `resumo`, `relatorioMes`, `banco`, `ledger`…). Trabalha sobre o estado global `S`.
   - Armazenamento: `PropertiesService.getUserProperties()`. A config fica em `cfg`, e os eventos em blocos `ev0`, `ev1`… de até 6000 caracteres cada. Usa `rev` para controle otimista de concorrência.
   - API chamada pelo cliente: `api_carregar`, `api_salvar(estado, revBase)`, `api_sincronizar` e `api_apagarTudo` (apaga as propriedades, a agenda "Plantão" e o gatilho). As funções internas terminam em `_`.
   - Backup: Ajustes > Seus dados exporta e importa um JSON `{app:'escala-plantao', dados}`, validado por `lerCopia` no cliente.
-  - Agenda: `srvSincronizar_` compara o que existe com o que deveria existir pelas tags `k` (chave) e `sig` (assinatura). Faz no máximo 20 operações por rodada, com pausa de 500 ms entre elas.
+  - Agenda: usa o serviço avançado `Calendar` (API v3) com o escopo `calendar.app.created`, então o app só enxerga a agenda que ele criou (id em `cal` nas propriedades do usuário; se sumir, `srvAgenda_` cria outra). `srvSincronizar_` compara o que existe com o que deveria existir pelas marcas `k` (chave) e `sig` (assinatura) em `extendedProperties.private`, gravadas na mesma chamada que cria o evento. Evento sem marca foi posto à mão e não é mexido. Faz no máximo 20 operações por rodada, com pausa de 500 ms entre elas.
 - `Index.html`: o front inteiro (CSS, HTML e JS num só arquivo, sem framework). Usa uma **cópia idêntica** do bloco UTIL/ENGINE, além das views (`viewHoje`, `viewMes`, `viewLancar`, `viewSaldos`, `viewAjustes`), dos formulários e de `gs()`, um wrapper com Promise sobre `google.script.run`.
 
 **Importante:** o bloco entre `//#UTIL-START` e `//#ENGINE-END` precisa ficar igual nos dois arquivos. Toda mudança no motor deve ser feita nos dois.
@@ -34,7 +34,7 @@ Cada pessoa abre o app com a própria conta Google (`executeAs: USER_ACCESSING`,
 - Armazenamento: `cfg.nev` diz quantos blocos `evN` valem. Ao ler, blocos acima disso são ignorados. Há um limite de espaço em `LIMITE_BYTES`, abaixo dos ~500 KB que o Google permite.
 - Teste fechado: `srvAcesso_` (chamado em `doGet` e `api_carregar`) libera só os primeiros `VAGAS` e-mails (`Session.getActiveUser`, escopo `userinfo.email`). Eles ficam na propriedade do script `acessos`; e-mails em `livres` entram sem ocupar vaga. As duas se editam no editor, em Configurações do projeto > Propriedades do script. Apagar um e-mail de `acessos` libera a vaga.
 - Registro de uso: `srvRegistrarUso_` (em `api_carregar` e no `api_salvar` que deu certo) grava na propriedade do script `uso:<e-mail>` o último acesso, as aberturas e quantos lançamentos a pessoa tem. Nunca o conteúdo.
-- `TITULO_APP` precisa acompanhar os títulos gerados em `srvEspec_`, porque é por ele que a sincronização reconhece eventos do app que ficaram sem marca.
+- Privacidade: a seção em Ajustes explica o que é guardado e o que o autor vê. Se mudar o que é coletado (ex.: `srvRegistrarUso_`), atualize esse texto.
 
 ## Regras do projeto
 

@@ -430,8 +430,9 @@ function api_apagarTudo() {
   try {
     const props = srvProps_();
     const id = props.getProperty('cal');
-    const cal = id ? CalendarApp.getCalendarById(id) : null;
-    if (cal) cal.deleteCalendar();
+    if (id) {
+      try { Calendar.Calendars.remove(id); } catch (e) { if (!srvNaoAchou_(e)) throw e; }
+    }
     srvRemoverGatilho_();
     props.deleteAllProperties();
     return { ok: true };
@@ -442,21 +443,30 @@ function api_apagarTudo() {
 
 /* ---------------- agenda do Google ---------------- */
 
+/*
+ * A agenda usa o serviço avançado Calendar (API v3) com o escopo calendar.app.created:
+ * o app só enxerga e altera as agendas que ele mesmo criou, nunca as outras agendas da pessoa.
+ */
+
+/** Cor de evento (colorId da API do Google Agenda) por tipo de serviço. */
+const COR_EVENTO = { dia: '5', noite: '2', extra: '4', permuta: '9' };
+
+function srvNaoAchou_(e) { return /not ?found|404|forbidden|403/i.test(String((e && e.message) || e)); }
+
+/** Devolve o id da agenda "Plantão", criando de novo se ela não existir mais (apagada pela pessoa). */
 function srvAgenda_() {
   const props = srvProps_();
   const id = props.getProperty('cal');
-  let cal = id ? CalendarApp.getCalendarById(id) : null;
-  if (!cal) {
-    const tz = CalendarApp.getDefaultCalendar().getTimeZone();
-    cal = CalendarApp.createCalendar(NOME_AGENDA, {
-      timeZone: tz,
-      color: CalendarApp.Color.BLUE,
-      description: 'Criada pelo app Escala de Plantão. Não edite os eventos à mão: o app reescreve esta agenda.',
-      selected: true
-    });
-    props.setProperty('cal', cal.getId());
+  if (id) {
+    try { Calendar.Calendars.get(id); return id; } catch (e) { if (!srvNaoAchou_(e)) throw e; }
   }
-  return cal;
+  const cal = Calendar.Calendars.insert({
+    summary: NOME_AGENDA,
+    timeZone: Session.getScriptTimeZone(),
+    description: 'Criada pelo app Escala de Plantão. Não edite os eventos à mão: o app reescreve esta agenda.'
+  });
+  props.setProperty('cal', cal.id);
+  return cal.id;
 }
 
 function srvEspec_(t, tz) {
@@ -464,44 +474,33 @@ function srvEspec_(t, tz) {
   let titulo, cor, desc;
   if (t.origem === 'escala') {
     titulo = 'Plantão — ' + nomeT;
-    cor = t.tipo === 'dia' ? CalendarApp.EventColor.YELLOW : CalendarApp.EventColor.PALE_GREEN;
+    cor = t.tipo === 'dia' ? COR_EVENTO.dia : COR_EVENTO.noite;
     desc = 'Serviço da escala, das ' + t.ini + ' às ' + t.fim + '.';
   } else if (t.origem === 'extra') {
     titulo = 'DRSO — ' + String(t.horas).replace('.', ',') + 'h';
-    cor = CalendarApp.EventColor.PALE_RED;
+    cor = COR_EVENTO.extra;
     desc = 'DRSO, das ' + t.ini + ' às ' + t.fim + '.' + (t.ev && t.ev.obs ? ' ' + t.ev.obs : '');
   } else {
     titulo = 'Plantão (permuta com ' + (t.ev && t.ev.pessoa ? t.ev.pessoa : 'colega') + ')';
-    cor = CalendarApp.EventColor.BLUE;
+    cor = COR_EVENTO.permuta;
     desc = 'Serviço assumido em permuta, das ' + t.ini + ' às ' + t.fim + '.' + (t.ev && t.ev.obs ? ' ' + t.ev.obs : '');
   }
   const alertas = t.tipo === 'custom' ? [120] : ((S.alertas && S.alertas[t.tipo]) || []).filter(function (m) { return m > 0; });
-  const inicio = Utilities.parseDate(t.data + ' ' + t.ini, tz, 'yyyy-MM-dd HH:mm');
-  const fim = Utilities.parseDate(t.dataFim + ' ' + t.fim, tz, 'yyyy-MM-dd HH:mm');
+  const inicio = t.data + 'T' + t.ini + ':00', fim = t.dataFim + 'T' + t.fim + ':00';
   const key = t.data + '|' + t.ini + '|' + t.fim + '|' + t.origem;
-  const sig = JSON.stringify([titulo, inicio.getTime(), fim.getTime(), desc, alertas, String(cor)]);
-  return { key: key, titulo: titulo, desc: desc, cor: cor, alertas: alertas, inicio: inicio, fim: fim, sig: sig };
-}
-
-/** Títulos gerados por srvEspec_ (precisa acompanhar se eles mudarem). */
-const TITULO_APP = /^(Plantão — (DIA|NOITE)|DRSO — [\d,]+h|Plantão \(permuta com .*\))$/;
-
-function srvAplicar_(ev, sp, novo) {
-  // a marca "k" vem primeiro: se algo falhar depois, o evento já é reconhecido e será ajustado na próxima rodada
-  ev.setTag('k', sp.key);
-  if (!novo) {
-    ev.setTitle(sp.titulo);
-    ev.setTime(sp.inicio, sp.fim);
-    ev.setDescription(sp.desc);
-  }
-  ev.setColor(sp.cor);
-  ev.removeAllReminders();
-  sp.alertas.forEach(function (m) { ev.addPopupReminder(m); });
-  ev.setTag('sig', sp.sig);
+  const sig = JSON.stringify([titulo, inicio, fim, desc, alertas, cor]);
+  // a marca (k, sig) vai junto na mesma chamada: não sobra evento do app sem marca se algo falhar
+  const recurso = {
+    summary: titulo, description: desc, colorId: cor,
+    start: { dateTime: inicio, timeZone: tz }, end: { dateTime: fim, timeZone: tz },
+    reminders: { useDefault: false, overrides: alertas.map(function (m) { return { method: 'popup', minutes: m }; }) },
+    extendedProperties: { private: { k: key, sig: sig } }
+  };
+  return { key: key, sig: sig, recurso: recurso };
 }
 
 function srvLimite_(e) {
-  return /muitas agendas|muitos eventos|too many calendars|too many events|rate limit/i.test(String((e && e.message) || e));
+  return /muitas agendas|muitos eventos|too many calendars|too many events|rate ?limit|usage limits|quota/i.test(String((e && e.message) || e));
 }
 
 function srvConfigurado_(estado) { return !!(estado && estado.ciclos && estado.ciclos.length); }
@@ -523,8 +522,8 @@ function srvSincronizar_() {
   const estado = srvLerEstado_();
   if (!srvConfigurado_(estado)) throw new Error('Escala ainda não configurada.');
   S = normalizar(estado);
-  const cal = srvAgenda_();
-  const tz = cal.getTimeZone();
+  const calId = srvAgenda_();
+  const tz = Session.getScriptTimeZone();
   const hojeStr = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
   const ateStr = addDias(hojeStr, HORIZONTE_DIAS);
   const desej = {};
@@ -553,31 +552,29 @@ function srvSincronizar_() {
       return false;
     }
   }
-  cal.getEvents(ini, fimJanela).forEach(function (ev) {
-    if (ev.getStartTime().getTime() < ini.getTime()) return;
-    const k = ev.getTag('k');
-    if (!k) {
-      // sobra de uma rodada interrompida: evento do app sem marca. Só mexe se o título é exatamente um dos que o app cria.
-      if (TITULO_APP.test(ev.getTitle())) { if (tentar(function () { ev.deleteEvent(); })) removidos++; }
+  let existentes = [], pagina;
+  do {
+    const r = Calendar.Events.list(calId, { timeMin: ini.toISOString(), timeMax: fimJanela.toISOString(), singleEvents: true, maxResults: 2500, pageToken: pagina });
+    existentes = existentes.concat(r.items || []);
+    pagina = r.nextPageToken;
+  } while (pagina);
+  existentes.forEach(function (ev) {
+    if (new Date(ev.start.dateTime || ev.start.date).getTime() < ini.getTime()) return;
+    const marca = (ev.extendedProperties && ev.extendedProperties.private) || {};
+    if (!marca.k) return; // evento posto à mão na agenda Plantão: não é do app, fica
+    const sp = desej[marca.k];
+    if (!sp || vistos[marca.k]) {
+      if (tentar(function () { Calendar.Events.remove(calId, ev.id); })) removidos++;
       return;
     }
-    const sp = desej[k];
-    if (!sp || vistos[k]) {
-      if (tentar(function () { ev.deleteEvent(); })) removidos++;
-      return;
-    }
-    vistos[k] = true;
-    if (ev.getTag('sig') !== sp.sig) {
-      if (tentar(function () { srvAplicar_(ev, sp, false); })) atualizados++;
+    vistos[marca.k] = true;
+    if (marca.sig !== sp.sig) {
+      if (tentar(function () { Calendar.Events.update(sp.recurso, calId, ev.id); })) atualizados++;
     }
   });
   Object.keys(desej).forEach(function (k) {
     if (vistos[k]) return;
-    const sp = desej[k];
-    if (tentar(function () {
-      const ev = cal.createEvent(sp.titulo, sp.inicio, sp.fim, { description: sp.desc });
-      srvAplicar_(ev, sp, true);
-    })) criados++;
+    if (tentar(function () { Calendar.Events.insert(desej[k].recurso, calId); })) criados++;
   });
   srvGarantirGatilho_();
   const info = { ate: ateStr, quando: Utilities.formatDate(new Date(), tz, 'dd/MM HH:mm'), criados: criados, removidos: removidos, atualizados: atualizados, pendente: pendente, limite: limite };

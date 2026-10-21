@@ -16,9 +16,32 @@ for (const m of cli.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Function(m[1]
 // 1. o motor é igual no servidor e no cliente
 assert.strictEqual(bloco(srv), bloco(cli), 'bloco UTIL/ENGINE diferente entre Código.js e Index.html');
 
+const pad2 = n => String(n).padStart(2, '0'), iso = (y, m, d) => y + '-' + pad2(m) + '-' + pad2(d);
+
+// serviço avançado Calendar (API v3) falso: agendas e eventos em memória
+function agendaFalsa(apagadas) {
+  const cals = {}, evs = {};
+  let n = 0;
+  const naoAchou = () => { throw new Error('Not Found'); };
+  return {
+    cals, evs,
+    Calendars: {
+      get: id => cals[id] || naoAchou(),
+      insert: r => (cals['cal' + (++n)] = Object.assign({ id: 'cal' + n }, r)),
+      remove: id => { if (!cals[id]) naoAchou(); delete cals[id]; apagadas.push(id); },
+    },
+    Events: {
+      list: id => ({ items: Object.values(evs).filter(e => e.cal === id) }),
+      insert: (r, id) => (evs['e' + (++n)] = Object.assign(JSON.parse(JSON.stringify(r)), { id: 'e' + n, cal: id })),
+      update: (r, id, eid) => { evs[eid] = Object.assign(JSON.parse(JSON.stringify(r)), { id: eid, cal: id }); },
+      remove: (id, eid) => { delete evs[eid]; },
+    },
+  };
+}
+
 // carrega Código.js com PropertiesService e Utilities falsos, numa data fixa
 function carregar(ano) {
-  const agendaApagada = [], props = {}, sprops = {}, quem = { email: 'eu@x.com' }, gatilhos = [{ getHandlerFunction: () => 'sincronizarDiario' }];
+  const agendaApagada = [], agenda = agendaFalsa(agendaApagada), props = {}, sprops = {}, quem = { email: 'eu@x.com' }, gatilhos = [{ getHandlerFunction: () => 'sincronizarDiario' }];
   const RealDate = Date;
   class D extends RealDate { constructor(...a) { a.length ? super(...a) : super(ano, 5, 1); } }
   D.UTC = RealDate.UTC; D.now = () => new D().getTime();
@@ -36,14 +59,16 @@ function carregar(ano) {
       setProperty: (k, v) => { sprops[k] = v; },
     }) },
     Session: { getActiveUser: () => ({ getEmail: () => quem.email }), getScriptTimeZone: () => 'America/Fortaleza' },
-    Utilities: { newBlob: s => ({ getBytes: () => Buffer.from(s, 'utf8') }), formatDate: () => '01/06 10:00' },
+    Utilities: { newBlob: s => ({ getBytes: () => Buffer.from(s, 'utf8') }), formatDate: (d, tz, f) => (f === 'yyyy-MM-dd' ? iso(d.getFullYear(), d.getMonth() + 1, d.getDate()) : '01/06 10:00'),
+      parseDate: s => new D(s.replace(' ', 'T') + ':00'), sleep() {} },
     LockService: { getUserLock: () => ({ waitLock() {}, releaseLock() {} }), getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
-    CalendarApp: { getCalendarById: id => (id === 'cal1' ? { deleteCalendar: () => { agendaApagada.push(id); } } : null) },
-    ScriptApp: { getProjectTriggers: () => gatilhos.slice(), deleteTrigger: g => gatilhos.splice(gatilhos.indexOf(g), 1) },
+    Calendar: agenda,
+    ScriptApp: { getProjectTriggers: () => gatilhos.slice(), deleteTrigger: g => gatilhos.splice(gatilhos.indexOf(g), 1),
+      newTrigger: () => ({ timeBased: () => ({ everyDays: () => ({ atHour: () => ({ create: () => gatilhos.push({ getHandlerFunction: () => 'sincronizarDiario' }) }) }) }) }) },
   };
   vm.createContext(ctx);
-  vm.runInContext(srv + ';this.E={pascoa,feriadosDoAno,PADRAO,normalizar,srvLerEstado_,srvGravarEstado_,api_salvar,api_apagarTudo,sincronizarDiario,srvAcesso_,api_carregar,TITULO_APP,calcDRSO,mkTurno,setS:x=>{S=x}};', ctx);
-  return { E: ctx.E, props, sprops, quem, gatilhos, agendaApagada };
+  vm.runInContext(srv + ';this.E={pascoa,feriadosDoAno,PADRAO,normalizar,srvLerEstado_,srvGravarEstado_,api_salvar,api_apagarTudo,sincronizarDiario,srvAcesso_,api_carregar,srvSincronizar_,calcDRSO,mkTurno,setS:x=>{S=x}};', ctx);
+  return { E: ctx.E, props, sprops, quem, gatilhos, agendaApagada, agenda };
 }
 
 // 2. feriados: Páscoa e regra igual à lista fixa antiga de 2026–2027
@@ -92,9 +117,35 @@ assert.deepStrictEqual(E.PADRAO().feriados, ANTIGA);
   assert.strictEqual(E.srvLerEstado_().rev, 1, 'nada deveria ter sido gravado');
 }
 
-// 5. limpeza da agenda só reconhece títulos que o app cria
-['Plantão — DIA', 'Plantão — NOITE', 'DRSO — 6h', 'DRSO — 7,5h', 'Plantão (permuta com João)'].forEach(t => assert.ok(E.TITULO_APP.test(t), t));
-['Plantão extra combinado', 'Plantão', 'DRSO — reunião'].forEach(t => assert.ok(!E.TITULO_APP.test(t), t));
+// 5. sincronização da agenda: cria a agenda e os eventos marcados, ajusta o que mudou e não mexe em evento posto à mão
+{
+  const { E, props, agenda } = carregar(2026);
+  E.api_salvar(Object.assign(E.PADRAO(), { ciclos: [{ desde: '2026-06-01', seq: ['dia', 'noite', 'folga', 'folga'] }] }), 0);
+  // roda até não sobrar pendência (cada rodada faz no máximo LOTE_OPS operações) e soma os contadores
+  const sinc = () => { const t = { criados: 0, removidos: 0, atualizados: 0 }; let x; do { x = E.srvSincronizar_(); for (const k in t) t[k] += x[k]; } while (x.pendente); return t; };
+  let r = sinc();
+  const calId = props.cal;
+  assert.ok(agenda.cals[calId], 'agenda Plantão criada');
+  const doApp = () => Object.values(agenda.evs).filter(e => e.extendedProperties && e.extendedProperties.private.k);
+  assert.ok(r.criados > 0 && doApp().length === r.criados);
+  const dia = doApp().find(e => e.summary === 'Plantão — DIA');
+  assert.deepStrictEqual(dia.reminders.overrides, [{ method: 'popup', minutes: 600 }]);
+  assert.strictEqual(dia.start.dateTime.slice(10), 'T06:00:00');
+  agenda.Events.insert({ summary: 'meu compromisso', start: { dateTime: '2026-06-02T10:00:00' } }, calId);
+  r = sinc();
+  assert.strictEqual(r.criados + r.removidos + r.atualizados, 0, 'segunda rodada sem mudanças');
+  assert.ok(Object.values(agenda.evs).some(e => e.summary === 'meu compromisso'), 'evento posto à mão continua');
+  // muda o alerta do turno de dia: os eventos de dia são atualizados, nada é recriado
+  const est = E.srvLerEstado_(); est.alertas.dia = [480];
+  E.api_salvar(est, est.rev);
+  r = sinc();
+  assert.ok(r.atualizados > 0 && r.criados === 0 && r.removidos === 0);
+  assert.ok(doApp().filter(e => e.summary === 'Plantão — DIA').every(e => e.reminders.overrides[0].minutes === 480));
+  // agenda apagada pela pessoa: o app cria outra
+  delete agenda.cals[calId];
+  E.srvSincronizar_();
+  assert.ok(props.cal !== calId && agenda.cals[props.cal]);
+}
 
 // 6. gatilho diário se remove quando não há escala configurada
 {
@@ -105,9 +156,9 @@ assert.deepStrictEqual(E.PADRAO().feriados, ANTIGA);
 
 // 7. apagar tudo: limpa propriedades, apaga a agenda e o gatilho
 {
-  const { E, props, gatilhos, agendaApagada } = carregar(2026);
+  const { E, props, gatilhos, agendaApagada, agenda } = carregar(2026);
   assert.ok(E.api_salvar(Object.assign(E.PADRAO(), { ciclos: [{ desde: '2026-01-01', seq: ['dia'] }] }), 0).ok);
-  props.cal = 'cal1';
+  props.cal = 'cal1'; agenda.cals.cal1 = { id: 'cal1' };
   assert.ok(E.api_apagarTudo().ok);
   assert.deepStrictEqual(Object.keys(props), []);
   assert.deepStrictEqual(agendaApagada, ['cal1']);
