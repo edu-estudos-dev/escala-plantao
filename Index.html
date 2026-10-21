@@ -112,7 +112,7 @@ h2.sec::after{content:"";flex:1;height:1px;background:var(--rule)}
 .k-folga.dc{box-shadow:inset 0 0 0 1px var(--line)}
 .dc .w{font:700 10px var(--f-disp);letter-spacing:.06em;text-transform:uppercase;opacity:.75}
 .dc .n{font:800 20px/1.15 var(--f-disp);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.dc .t{font:600 9px var(--f-mono);white-space:nowrap;letter-spacing:.02em}
+.dc .t{font:600 9px/1.2 var(--f-mono);white-space:pre;letter-spacing:.02em;text-align:center}
 .k-canc.dc,.k-canc.mc{background:repeating-linear-gradient(135deg,var(--off-bg) 0 5px,var(--surface) 5px 10px);box-shadow:inset 0 0 0 1px var(--line)}
 .hoje{outline:2px solid var(--ouro);outline-offset:1px}
 
@@ -567,7 +567,7 @@ function celulaTipo(s){
   const cn=ts.filter(t=>t.cancelado);
   if(at.length){
     const t=at.find(x=>x.origem==='escala')||at[0];
-    const txt=t.origem==='escala'?(t.tipo==='dia'?'DIA':'NOITE'):((t.origem==='extra'?'DRSO':'PERM')+(t.tipo==='dia'?' D':t.tipo==='noite'?' N':''));
+    const txt=t.origem==='escala'?(t.tipo==='dia'?'DIA':'NOITE'):((t.origem==='extra'?'DRSO':'PERMUTA')+(t.tipo==='dia'?'\nDIA':t.tipo==='noite'?'\nNOITE':''));
     return{k:'k-'+klass(t),txt};
   }
   if(cn.length){

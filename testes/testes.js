@@ -10,6 +10,9 @@ const bloco = t => {
   return t.slice(i, f);
 };
 
+// 0. o JS do Index.html compila (erro de sintaxe deixa o app preso em "carregando")
+for (const m of cli.matchAll(/<script>([\s\S]*?)<\/script>/g)) new Function(m[1]);
+
 // 1. o motor é igual no servidor e no cliente
 assert.strictEqual(bloco(srv), bloco(cli), 'bloco UTIL/ENGINE diferente entre Código.js e Index.html');
 
