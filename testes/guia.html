@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=540">
+<title>Guia</title>
+<!-- Imagens de divulgação (540x960 CSS px, capturadas em 2x). /guia?n=1..8 na prévia (testes/previa.js). -->
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0C0E11;--fg:#ECE8DF;--muted:#9AA0A8;--ouro:#E6B43C;--line:#2A2F37}
+*{box-sizing:border-box}
+html,body{margin:0;width:540px;height:960px;overflow:hidden;background:var(--bg);color:var(--fg);font:400 16px/1.45 'Public Sans',sans-serif}
+.card{position:relative;width:540px;height:960px;padding:30px 28px 0;background:radial-gradient(120% 60% at 50% 0%,#1A1D23 0%,var(--bg) 60%)}
+.topo{display:flex;align-items:center;gap:10px;font:800 15px/1 'Schibsted Grotesk',sans-serif;letter-spacing:.05em;text-transform:uppercase}
+.topo::before{content:"";width:6px;height:18px;background:var(--ouro);border-radius:1px}
+.topo span{margin-left:auto;font:600 13px 'Public Sans';letter-spacing:0;text-transform:none;color:var(--muted)}
+h1{font:800 32px/1.08 'Schibsted Grotesk',sans-serif;letter-spacing:-.025em;margin:18px 0 8px}
+h1 em{font-style:normal;color:var(--ouro)}
+.sub{color:var(--muted);font-size:16px;margin:0}
+.fone{position:absolute;left:50%;transform:translateX(-50%);top:236px;width:372px;height:780px;border-radius:38px;background:#000;padding:10px;box-shadow:0 0 0 2px #2b2f36,0 30px 60px rgba(0,0,0,.6)}
+.tela{width:100%;height:100%;border-radius:29px;overflow:hidden;position:relative;background:#fff}
+.tela iframe{border:0;width:375px;height:860px;transform:scale(.939);transform-origin:0 0}
+.ilus{position:absolute;top:14px;right:14px;z-index:5;font:700 10px 'Public Sans';letter-spacing:.06em;text-transform:uppercase;background:rgba(0,0,0,.65);color:#fff;padding:3px 7px;border-radius:4px}
+/* tela ilustrativa do Google (simplificada, sem logotipos) */
+.g{font-family:'Public Sans',Arial,sans-serif;color:#1f1f1f;padding:56px 26px 0;height:100%;background:#fff}
+.g .conta{display:flex;align-items:center;gap:8px;font-size:13px;color:#444;border:1px solid #ddd;border-radius:999px;padding:4px 12px 4px 4px;width:max-content;margin-bottom:22px}
+.g .conta i{width:22px;height:22px;border-radius:50%;background:#8ab4f8;display:inline-block}
+.g .alerta{width:44px;height:44px;margin-bottom:14px}
+.g h2{font:500 23px/1.25 'Public Sans',Arial,sans-serif;margin:0 0 14px;color:#1f1f1f}
+.g p{font-size:14px;line-height:1.5;color:#444;margin:0 0 12px}
+.g .azul{color:#0b57d0;font-weight:600;font-size:14px}
+.g .botoes{display:flex;justify-content:space-between;align-items:center;margin-top:26px}
+.g .bt{background:#0b57d0;color:#fff;border-radius:999px;padding:10px 20px;font-weight:600;font-size:14px}
+.g .bt.cl{background:none;color:#0b57d0;padding:10px 6px}
+.g .perm{border-top:1px solid #e3e3e3;padding:12px 0;display:flex;gap:12px;font-size:13.5px;line-height:1.4;color:#333}
+.g .chk{flex:none;width:20px;height:20px;border-radius:3px;background:#0b57d0;position:relative;margin-top:1px}
+.g .chk::after{content:"";position:absolute;left:6px;top:2px;width:6px;height:11px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.g .sel{font-weight:600;font-size:14px;display:inline-flex;padding-right:10px;gap:12px;align-items:center;padding:10px 0;color:#1f1f1f}
+/* destaque e seta */
+.alvo{position:relative;z-index:3;outline:3px solid var(--ouro);outline-offset:4px;border-radius:6px;box-shadow:0 0 0 9999px rgba(0,0,0,.0)}
+.seta{position:absolute;z-index:10;display:flex;align-items:center;gap:8px;pointer-events:none}
+.seta b{flex:none;width:40px;height:40px;border-radius:50%;background:var(--ouro);color:#111;display:grid;place-items:center;font:800 22px 'Schibsted Grotesk',sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+.seta svg{width:86px;height:40px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.45))}
+.seta.cima{flex-direction:column-reverse;gap:4px}
+.seta.dir{flex-direction:row-reverse}
+.seta.dir svg{transform:rotate(180deg)}
+.seta.cima svg{transform:rotate(-90deg);width:40px;height:86px;overflow:visible}
+.nota{position:absolute;left:28px;right:28px;bottom:16px;z-index:20;font-size:12px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<div class="card" id="c"></div>
+<script>
+const n=+(new URLSearchParams(location.search).get('n')||1);
+const SETA='<svg viewBox="0 0 86 40"><path d="M2 20 H66" stroke="#E6B43C" stroke-width="7" stroke-linecap="round"/><path d="M58 6 L80 20 L58 34" fill="none" stroke="#E6B43C" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ALERTA='<svg class="alerta" viewBox="0 0 24 24"><path d="M12 2 1 21h22L12 2z" fill="#d93025"/><path d="M12 9v5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="17.3" r="1.3" fill="#fff"/></svg>';
+const topo=(passo)=>'<div class="topo">Escala de Plantão<span>'+passo+'</span></div>';
+const app=(q)=>'<div class="fone"><div class="tela"><iframe src="/?print'+(q?'&'+q:'')+'" scrolling="no"></iframe></div></div>';
+const g=(html)=>'<div class="fone"><div class="tela"><span class="ilus">Ilustração</span><div class="g">'+html+'</div></div></div>';
+const seta=(num,top,left)=>'<div class="seta" style="top:'+top+'px;left:'+left+'px"><b>'+num+'</b>'+SETA+'</div>';
+const T={
+1:topo('Primeiro acesso · 1 de 3')+
+ '<h1>Aparece um aviso do Google? <em>É normal.</em></h1><p class="sub">Todo app novo que usa a Agenda mostra isso até passar pela revisão do Google. Toque em <b>Avançado</b>.</p>'+
+ g('<div class="conta"><i></i>voce@gmail.com</div>'+ALERTA+'<h2>O Google não verificou este app</h2><p>O app está pedindo acesso a informações da sua Conta do Google. Ele ainda não foi verificado pelo Google.</p><p>Continue apenas se você confia no desenvolvedor.</p><div class="botoes"><span class="azul alvo" data-n="1">Avançado</span><span class="bt">Voltar para a segurança</span></div>')
+,
+2:topo('Primeiro acesso · 2 de 3')+
+ '<h1>Toque em <em>Acessar Escala de Plantão</em></h1><p class="sub">“Não seguro” quer dizer só que o Google ainda não revisou o app. Seus dados ficam na sua conta.</p>'+
+ g('<div class="conta"><i></i>voce@gmail.com</div>'+ALERTA+'<h2>O Google não verificou este app</h2><p>O app está pedindo acesso a informações da sua Conta do Google. Ele ainda não foi verificado pelo Google.</p><p class="azul" style="margin-top:4px">Ocultar avançado</p><p>Continue apenas se você entende os riscos e confia no desenvolvedor.</p><p><span class="azul alvo" data-n="2">Acessar Escala de Plantão (não seguro)</span></p>')
+,
+3:topo('Primeiro acesso · 3 de 3')+
+ '<h1>Marque as permissões e toque em <em>Continuar</em></h1><p class="sub">A Agenda serve para criar a agenda <b>Plantão</b> com seus serviços e avisos.</p>'+
+ g('<div class="conta"><i></i>voce@gmail.com</div><h2 style="font-size:20px">Escala de Plantão quer acessar sua Conta do Google</h2><div class="sel alvo" data-n="3" data-dir="dir"><span class="chk"></span>Selecionar tudo</div><div class="perm"><span class="chk"></span><span>Ver, editar, compartilhar e excluir as agendas que você pode acessar</span></div><div class="perm"><span class="chk"></span><span>Permitir que o app seja executado quando você não estiver presente (atualiza a agenda de madrugada)</span></div><div class="botoes"><span class="bt cl">Cancelar</span><span class="bt alvo" data-n="4" data-dir="cima">Continuar</span></div>')
+,
+4:topo('Configuração inicial')+
+ '<h1>Informe seu <em>próximo serviço</em></h1><p class="sub">Dia ou noite, a data e o valor da sua hora de DRSO (depende da graduação). O app monta a escala e a agenda.</p>'+app('vazio'),
+5:topo('Hoje')+
+ '<h1>Próximo serviço, folga e os <em>próximos 14 dias</em></h1><p class="sub">Tudo de relance, com o tempo até o próximo plantão.</p>'+app(''),
+6:topo('Lançar')+
+ '<h1>DRSO, permuta, folga, férias e <em>banco de horas</em></h1><p class="sub">A DRSO já sai calculada, com +30% em fim de semana, feriado e madrugada.</p>'+app('aba=lancar'),
+7:topo('Mês')+
+ '<h1>O mês inteiro, com <em>resumo e fechamento</em></h1><p class="sub">Serviços, horas, DRSO, permutas e quanto falta receber.</p>'+app('aba=mes'),
+8:topo('Saldos')+
+ '<h1>Quem te deve serviço e <em>o que falta receber</em></h1><p class="sub">Permutas em aberto, DRSO a receber, banco de horas e a agenda do Google.</p>'+app('aba=saldos'),
+};
+const c=document.getElementById('c');
+c.innerHTML=T[n]+(n<=3?'<p class="nota">Ilustração: a tela real do Google pode variar um pouco.</p>':'');
+// setas apontando para cada .alvo: pela esquerda, ou de baixo para cima quando não há espaço à esquerda
+document.fonts.ready.then(()=>{const base=c.getBoundingClientRect();c.querySelectorAll('.alvo').forEach(a=>{const r=a.getBoundingClientRect(),d=document.createElement('div');d.innerHTML='<b>'+a.dataset.n+'</b>'+SETA;
+  const dir=a.dataset.dir||(r.left-base.left>150?'esq':'cima');
+  if(dir==='dir'){d.className='seta dir';d.style.top=(r.top-base.top+r.height/2-20)+'px';d.style.left=(r.right-base.left+14)+'px';}
+  else if(dir==='esq'){d.className='seta';d.style.top=(r.top-base.top+r.height/2-20)+'px';d.style.left=(r.left-base.left-148)+'px';}
+  else{d.className='seta cima';d.style.top=(r.bottom-base.top+12)+'px';d.style.left=(r.left-base.left+r.width/2-20)+'px';}
+  c.appendChild(d);});});
+</script>
+</body>
+</html>

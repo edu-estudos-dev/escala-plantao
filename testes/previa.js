@@ -22,13 +22,19 @@ const API={
  api_apagarTudo:()=>({ok:true})};
 function mk(ok,fail){return new Proxy({},{get(_,n){if(n==='withSuccessHandler')return h=>mk(h,fail);if(n==='withFailureHandler')return h=>mk(ok,h);return(...a)=>setTimeout(()=>ok(API[n](...a)),120);}});}
 window.google={script:{run:mk(()=>{},()=>{})}};
+// ?aba=mes abre direto numa aba; ?print esconde a barra de rolagem (para capturas)
+const q=new URLSearchParams(location.search),aba=q.get('aba');
+if(aba)window.addEventListener('load',()=>setTimeout(()=>{const b=document.querySelector('[data-act="aba"][data-arg="'+aba+'"]');if(b)b.click();},500));
+if(q.has('print'))document.write('<style>::-webkit-scrollbar{display:none}html{scrollbar-width:none}</style>');
 })();
 </script>`;
 
 http.createServer((req, res) => {
-  if (req.url.startsWith('/fontes')) { // comparação de fontes (testes/fontes.html)
+  // páginas auxiliares: /fontes (comparação de fontes) e /guia?n=1..8 (imagens de divulgação)
+  const aux = { '/fontes': 'fontes.html', '/guia': 'guia.html' }[req.url.split('?')[0]];
+  if (aux) {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-    return res.end(fs.readFileSync(path.join(__dirname, 'fontes.html')));
+    return res.end(fs.readFileSync(path.join(__dirname, aux)));
   }
   const html = fs.readFileSync(path.join(__dirname, '..', 'Index.html'), 'utf8').replace('<base target="_top">', '<base target="_top">' + STUB);
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
