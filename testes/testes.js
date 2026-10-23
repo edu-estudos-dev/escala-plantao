@@ -141,6 +141,12 @@ assert.deepStrictEqual(E.PADRAO().feriados, ANTIGA);
   r = sinc();
   assert.ok(r.atualizados > 0 && r.criados === 0 && r.removidos === 0);
   assert.ok(doApp().filter(e => e.summary === 'Plantão — DIA').every(e => e.reminders.overrides[0].minutes === 480));
+  // evento da versão antiga (marca em "shared") duplicando um atual: o app reconhece e remove a duplicata
+  const velho = doApp().find(e => e.summary === 'Plantão — DIA');
+  agenda.Events.insert({ summary: velho.summary, start: velho.start, extendedProperties: { shared: { k: velho.extendedProperties.private.k, sig: 'antiga' } } }, calId);
+  r = sinc();
+  assert.strictEqual(r.removidos + r.atualizados, 1);
+  assert.strictEqual(Object.values(agenda.evs).filter(e => e.summary === 'Plantão — DIA' && e.start.dateTime === velho.start.dateTime).length, 1, 'sobra um só');
   // agenda apagada pela pessoa: o app cria outra
   delete agenda.cals[calId];
   E.srvSincronizar_();

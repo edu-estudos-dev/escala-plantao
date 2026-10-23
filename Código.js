@@ -560,7 +560,9 @@ function srvSincronizar_() {
   } while (pagina);
   existentes.forEach(function (ev) {
     if (new Date(ev.start.dateTime || ev.start.date).getTime() < ini.getTime()) return;
-    const marca = (ev.extendedProperties && ev.extendedProperties.private) || {};
+    // versões antigas (CalendarApp.setTag) gravavam a marca em "shared"; as novas, em "private"
+    const ep = ev.extendedProperties || {};
+    const marca = Object.assign({}, ep.shared, ep.private);
     if (!marca.k) return; // evento posto à mão na agenda Plantão: não é do app, fica
     const sp = desej[marca.k];
     if (!sp || vistos[marca.k]) {
